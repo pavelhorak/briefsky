@@ -9,8 +9,7 @@
   }
 
   function toHourString(value: Date): string {
-    const hour = value.getHours();
-    return (hour % 12 || 12) + (hour < 12 ? 'am' : 'pm');
+    return value.getHours().toString();
   }
 </script>
 
@@ -19,7 +18,9 @@
 {:else if format === 'hour'}
   <span>{toHourString(value)}</span>
 {:else if format === 'short'}
-  <span>{value.toLocaleTimeString([], { timeStyle: 'short' })}</span>
+  <span>{value.toLocaleTimeString([], { hour12: false, hour: '2-digit' })}</span>
+{:else if format === 'time'}
+  <span>{value.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit' })}</span>
 {:else if format === 'long'}
   <span
     >{value.toLocaleString(undefined, {
@@ -27,8 +28,8 @@
       day: 'numeric',
       month: 'numeric',
       year: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
+      hour12: false,
+      hour: '2-digit',
       timeZoneName: 'short',
     })}</span
   >

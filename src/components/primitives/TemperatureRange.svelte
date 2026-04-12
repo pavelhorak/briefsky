@@ -15,7 +15,7 @@
   }
 </script>
 
-<div class="flex w-10/12 sm:w-11/12">
+<div class="flex w-full">
   <div class="text-right min-w-fit" style="min-width: {margin_left === 0 ? 'min-content' : `${margin_left}%`};">
     <Temperature value={low} />
   </div>

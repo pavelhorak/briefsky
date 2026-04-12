@@ -1,8 +1,5 @@
 <script lang="ts">
   import type { HourlyWeather } from '../providers/Provider';
-  import { configuration, Units } from '../Configuration';
-
-  import { mmToIn } from './primitives/Amount.svelte';
 
   import HourlyLineChart from './primitives/HourlyLineChart.svelte';
 
@@ -13,10 +10,7 @@
 
   /* Constants */
 
-  const DEFAULT_LIMITS = {
-    [Units.Metric]: [2.5, 5, 10],
-    [Units.Imperial]: [0.1, 0.25, 0.5],
-  };
+  const DEFAULT_LIMITS = [2.5, 5, 10];
 
   /* Derived State */
 
@@ -27,11 +21,11 @@
   let limit: number;
 
   $: {
-    units = $configuration.units === Units.Imperial ? 'in' : 'mm';
+    units = 'mm';
     timestamps = hourly.map((h) => h.timestamp);
     probabilities = hourly.map((h) => h.precipitation_probability!);
-    amounts = hourly.map((h) => ($configuration.units === Units.Imperial ? mmToIn(h.precipitation_amount!) : h.precipitation_amount!));
-    limit = ((max) => DEFAULT_LIMITS[$configuration.units].find((lim) => max < lim) ?? max)(Math.max(...amounts));
+    amounts = hourly.map((h) => h.precipitation_amount!);
+    limit = ((max) => DEFAULT_LIMITS.find((lim) => max < lim) ?? max)(Math.max(...amounts));
   }
 </script>
 
@@ -58,8 +52,8 @@
     {
       values: amounts,
       limit: limit,
-      valueFormatter: (value) => `${$configuration.units === Units.Imperial ? value.toFixed(2) : value.toFixed(1)}`,
-      tooltipFormatter: (value) => `${$configuration.units === Units.Imperial ? value.toFixed(2) : value.toFixed(1)} ${units}`,
+      valueFormatter: (value) => `${value.toFixed(1)}`,
+      tooltipFormatter: (value) => `${value.toFixed(1)} ${units}`,
       style: {
         tickClass: 'fill-green-600 dark:fill-green-300',
         fillClass: 'fill-green-500 dark:fill-green-400 [fill-opacity:30%]',

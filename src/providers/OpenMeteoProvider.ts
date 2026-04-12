@@ -1,6 +1,7 @@
 import type { Provider, CurrentWeather, DailyWeather, Weather } from './Provider';
 import type { Location } from './Location';
 import { ConditionsIcon, PrecipitationType } from './Provider';
+import { loadConfiguration } from '../Configuration';
 
 const CONDITIONS_TEXT_MAP: { [key: string]: string } = {
   '0': 'Clear Sky',
@@ -101,38 +102,63 @@ export class OpenMeteoProvider implements Provider {
     const startDate = new Date(currentTimestamp - 86400 * 1000).toISOString().split('T')[0];
     const endDate = new Date(currentTimestamp + 8 * 86400 * 1000).toISOString().split('T')[0];
 
-    let response: Response;
+    const config = loadConfiguration();
+
+    const openMeteoPromise = fetch(
+      OpenMeteoProvider.ENDPOINT_URL +
+      '?' +
+      new URLSearchParams(
+        [
+          ['latitude', this.location.latitude],
+          ['longitude', this.location.longitude],
+          ['timezone', 'auto'],
+          ['timeformat', 'unixtime'],
+          ['start_date', startDate],
+          ['end_date', endDate],
+          ['current_weather', 'true'],
+        ]
+          .concat(OpenMeteoProvider.DAILY_FIELDS.map((f) => ['daily', f]))
+          .concat(OpenMeteoProvider.HOURLY_FIELDS.map((f) => ['hourly', f])),
+      ),
+    );
+
+    let ecowittPromise = null;
+    if (config.useEcowitt && config.ecowittApiKey && config.ecowittAppKey && config.ecowittMac) {
+      const ecowittUrl = `https://api.ecowitt.net/api/v3/device/real_time?application_key=${config.ecowittAppKey}&api_key=${config.ecowittApiKey}&mac=${config.ecowittMac}&call_back=all&temp_unitid=1&pressure_unitid=3&wind_speed_unitid=6&rainfall_unitid=12&solar_irradiance_unitid=14`;
+      ecowittPromise = fetch(ecowittUrl);
+    }
+
+    let openMeteoResponse: Response;
+    let ecowittResponse: Response | null = null;
+
     try {
-      response = await fetch(
-        OpenMeteoProvider.ENDPOINT_URL +
-          '?' +
-          new URLSearchParams(
-            [
-              ['latitude', this.location.latitude],
-              ['longitude', this.location.longitude],
-              ['timezone', 'auto'],
-              ['timeformat', 'unixtime'],
-              ['start_date', startDate],
-              ['end_date', endDate],
-              ['current_weather', 'true'],
-            ]
-              .concat(OpenMeteoProvider.DAILY_FIELDS.map((f) => ['daily', f]))
-              .concat(OpenMeteoProvider.HOURLY_FIELDS.map((f) => ['hourly', f])),
-          ),
-      );
+      if (ecowittPromise) {
+        [openMeteoResponse, ecowittResponse] = await Promise.all([openMeteoPromise, ecowittPromise]);
+      } else {
+        openMeteoResponse = await openMeteoPromise;
+      }
     } catch (e) {
-      throw new Error(`Fetching from Open-Meteo: ${e.toString()}`);
+      throw new Error(`Fetching weather data: ${e.toString()}`);
     }
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     let data: any;
     try {
-      data = await response.json();
+      data = await openMeteoResponse.json();
     } catch (e) {
       throw new Error(`Fetching from Open-Meteo: Unexpected response data: ${e.toString()}`);
     }
 
-    if (!response.ok) {
+    let ecowittData: any = null;
+    if (ecowittResponse && ecowittResponse.ok) {
+      try {
+        ecowittData = await ecowittResponse.json();
+      } catch (e) {
+        console.error('Failed to parse Ecowitt data', e);
+      }
+    }
+
+    if (!openMeteoResponse.ok) {
       throw new Error(`Fetching from Open-Meteo: ${data.reason}`);
     }
 
@@ -146,22 +172,23 @@ export class OpenMeteoProvider implements Provider {
     const currentDailyIndex = data.current_weather.time < data.daily.time[1] ? 0 : 1;
     const currentHourlyIndex = data.hourly.time
       .map((t: any, i: number) => [Math.abs(t - data.current_weather.time), i])
-      .sort((a: [number, number], b: [number, number]) => a[0] > b[0])[0][1];
+      .sort((a: [number, number], b: [number, number]) => a[0] - b[0])[0][1];
 
     const current: CurrentWeather = {
       timestamp: new Date(data.current_weather.time * 1000),
       conditions: CONDITIONS_TEXT_MAP[data.current_weather.weathercode] ?? 'Unknown',
       conditions_icon: CONDITIONS_ICON_MAP[data.current_weather.weathercode] ?? ConditionsIcon.Unknown,
-      temperature: data.current_weather.temperature,
+      temperature: (config.useEcowitt && ecowittData?.data?.outdoor?.temperature?.value !== undefined) ? parseFloat(ecowittData.data.outdoor.temperature.value) : data.current_weather.temperature,
       temperature_low: data.daily.temperature_2m_min[currentDailyIndex],
       temperature_high: data.daily.temperature_2m_max[currentDailyIndex],
-      feels_like_temperature: data.hourly.apparent_temperature[currentHourlyIndex],
-      dew_point_temperature: data.hourly.dewpoint_2m[currentHourlyIndex],
-      relative_humidity: data.hourly.relativehumidity_2m[currentHourlyIndex],
-      wind_speed: data.current_weather.windspeed,
-      wind_direction: data.current_weather.winddirection,
-      pressure: data.hourly.pressure_msl[currentHourlyIndex],
+      feels_like_temperature: (config.useEcowitt && ecowittData?.data?.outdoor?.app_temp?.value !== undefined) ? parseFloat(ecowittData.data.outdoor.app_temp.value) : data.hourly.apparent_temperature[currentHourlyIndex],
+      dew_point_temperature: (config.useEcowitt && ecowittData?.data?.outdoor?.dew_point?.value !== undefined) ? parseFloat(ecowittData.data.outdoor.dew_point.value) : data.hourly.dewpoint_2m[currentHourlyIndex],
+      relative_humidity: (config.useEcowitt && ecowittData?.data?.outdoor?.humidity?.value !== undefined) ? parseInt(ecowittData.data.outdoor.humidity.value) : data.hourly.relativehumidity_2m[currentHourlyIndex],
+      wind_speed: (config.useEcowitt && ecowittData?.data?.wind?.wind_speed?.value !== undefined) ? parseFloat(ecowittData.data.wind.wind_speed.value) * 3.6 : data.current_weather.windspeed,
+      wind_direction: (config.useEcowitt && ecowittData?.data?.wind?.wind_direction?.value !== undefined) ? parseInt(ecowittData.data.wind.wind_direction.value) : data.current_weather.winddirection,
+      pressure: (config.useEcowitt && ecowittData?.data?.pressure?.relative?.value !== undefined) ? parseFloat(ecowittData.data.pressure.relative.value) : data.hourly.pressure_msl[currentHourlyIndex],
       visibility: data.hourly.visibility[currentHourlyIndex] / 1000,
+      uv_index: (config.useEcowitt && ecowittData?.data?.solar_and_uvi?.uvi?.value !== undefined) ? parseInt(ecowittData.data.solar_and_uvi.uvi.value) : undefined,
       hourly: hourlyData
         .filter((h: any) => h.time >= data.current_weather.time && h.time < data.current_weather.time + 90000)
         .map((h: any) => ({
@@ -169,6 +196,12 @@ export class OpenMeteoProvider implements Provider {
           conditions: CONDITIONS_TEXT_MAP[h.weathercode] ?? 'Unknown',
           conditions_icon: CONDITIONS_ICON_MAP[h.weathercode] ?? ConditionsIcon.Unknown,
           temperature: h.temperature_2m,
+          wind_speed: h.windspeed_10m,
+          wind_direction: h.winddirection_10m,
+          precipitation_probability: h.precipitation_probability,
+          precipitation_amount: h.precipitation,
+          precipitation_type:
+            h.precipitation === 0 ? PrecipitationType.None : h.snowfall > h.rain + h.showers ? PrecipitationType.Snow : PrecipitationType.Rain,
         })),
     };
 

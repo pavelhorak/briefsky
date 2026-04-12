@@ -18,7 +18,7 @@
     };
   }
 
-  /* Basic Properties */
+  /* Advanced Properties */
   export let uid: string;
   export let title: string;
   export let timestamps: Date[];
@@ -26,10 +26,12 @@
 
   /* Advanced Properties */
   export let ticks: number = 4;
-  export let width: number = 1200;
+  export let width: number = 1000;
   export let height: number = 125;
 
   /* Constants */
+  const marginX = 60;
+  const marginY = 10;
   const tickLength = 10;
   const pointRadius = 5;
   const xAxisMargin = 45;
@@ -54,9 +56,8 @@
       version="1.2"
       xmlns="http://www.w3.org/2000/svg"
       xmlns:xlink="http://www.w3.org/1999/xlink"
-      class="overflow-visible"
       width="100%"
-      viewBox="0 0 {width} {height + xAxisMargin}"
+      viewBox="{-marginX} {-marginY} {width + 2 * marginX} {height + xAxisMargin + 2 * marginY}"
     >
       <!-- Grid and Ticks -->
       <g class="stroke-gray-400 dark:stroke-gray-200">
@@ -74,14 +75,13 @@
       <!-- X Axis Tick Values (Hours) -->
       <g class="fill-gray-800 dark:fill-gray-200 text-5xl sm:text-4xl md:text-2xl lg:text-xl">
         {#each [...Array(25).fill(0).keys()].filter((i) => i % 2 === 0) as i}
-          {@const hour = timestamps[i] ? timestamps[i].getHours() : (timestamps[0].getHours() + i) % 24}
+          {@const hour = timestamps && timestamps[i] ? timestamps[i].getHours() : (timestamps && timestamps[0] ? (timestamps[0].getHours() + i) % 24 : '--')}
           <text
             x={i * xPitch}
             y={height + tickLength + xTickValueOffset}
             text-anchor={i === 0 ? 'start' : i === 24 ? 'end' : 'middle'}
             dominant-baseline="hanging"
-            class={i === 2 || i === 6 || i === 10 || i === 14 || i === 18 || i === 22 ? 'block' : 'hidden md:block'}
-            >{(hour % 12 || 12) + (hour < 12 ? 'am' : 'pm')}</text
+            class={i === 2 || i === 6 || i === 10 || i === 14 || i === 18 || i === 22 ? 'block' : 'hidden md:block'}>{hour}</text
           >
         {/each}
       </g>

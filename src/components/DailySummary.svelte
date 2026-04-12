@@ -1,4 +1,5 @@
 <script lang="ts">
+  import classNames from 'classnames';
   import type { CurrentWeather, DailyWeather } from '../providers/Provider';
 
   import ConditionsIcon from './primitives/ConditionsIcon.svelte';
@@ -9,11 +10,14 @@
   export let daily: DailyWeather;
   export let global_low: number;
   export let global_high: number;
+
+  let className: string = '';
+  export { className as class };
 </script>
 
-<div class="flex items-center gap-4 w-full">
+<div class={classNames('flex items-center gap-4', className)}>
   <div><ConditionsIcon value={daily.conditions_icon} /></div>
-  <div class="w-[10%]">
+  <div class="min-w-[4rem] sm:min-w-[5rem]">
     <span class="font-semibold">
       {#if current.timestamp > daily.hourly[0].timestamp || daily.hourly[0].timestamp.getTime() - current.timestamp.getTime() < 3600 * 1000}
         Today

@@ -4,6 +4,7 @@
 
   import Temperature from './primitives/Temperature.svelte';
   import Timestamp from './primitives/Timestamp.svelte';
+  import ConditionsIconComponent from './primitives/ConditionsIcon.svelte';
 
   /* Properties */
 
@@ -68,6 +69,7 @@
 
   let aggregation: {
     conditions: HourlyConditions;
+    icon: ConditionsIcon;
     duration: number;
   }[] = [];
   let temperatureLow: number;
@@ -85,7 +87,7 @@
     for (const entry of hourly.slice(0, 24)) {
       const conditions = ICON_MAP[entry.conditions_icon] ?? HourlyConditions.Unknown;
       if (aggregation.length === 0 || aggregation[aggregation.length - 1].conditions !== conditions) {
-        aggregation.push({ conditions: conditions, duration: 1 });
+        aggregation.push({ conditions: conditions, icon: entry.conditions_icon, duration: 1 });
       } else {
         aggregation[aggregation.length - 1].duration += 1;
       }
@@ -100,12 +102,10 @@
 <div class="-mb-2">
   <div class="flex mb-1.5 overflow-hidden rounded-md text-sm sm:text-base">
     {#each aggregation as entry}
-      <div class="h-10 leading-9 {CLASS_TEXT_MAP[entry.conditions][0]} text-center" style="width: {(100 * entry.duration) / 24}%;">
-        {#if entry.duration > 4}
-          <div class="truncate">{CLASS_TEXT_MAP[entry.conditions][1]}</div>
-        {:else if entry.duration > 2}
-          <div class="hidden md:block truncate">{CLASS_TEXT_MAP[entry.conditions][1]}</div>
-        {/if}
+      <div class="h-10 flex justify-center items-center {CLASS_TEXT_MAP[entry.conditions][0]}" style="width: {(100 * entry.duration) / 24}%;">
+        <div class="scale-75 sm:scale-90">
+          <ConditionsIconComponent value={entry.icon} size="small" />
+        </div>
       </div>
     {/each}
   </div>

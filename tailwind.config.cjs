@@ -6,8 +6,28 @@ const config = {
       sm: '480px',
       md: '768px',
       lg: '976px',
+      // Landscape breakpoint: matches typical tablet landscape widths
+      'landscape': { raw: '(min-aspect-ratio: 4/3) and (min-width: 976px)' },
     },
     extend: {
+      gridTemplateColumns: {
+        '6': 'repeat(6, minmax(0, 1fr))',
+        '16': 'repeat(16, minmax(0, 1fr))',
+      },
+      gridTemplateRows: {
+        '10': 'repeat(10, minmax(0, 1fr))',
+      },
+      gridColumnStart: {
+        '13': '13',
+        '14': '14',
+        '15': '15',
+        '16': '16',
+      },
+      gridRowStart: {
+        '8': '8',
+        '9': '9',
+        '10': '10',
+      },
       fontFamily: {
         sans: ['"Cantarell"', '"Open Sans"', 'ui-sans-serif', 'system-ui', 'san-serif'],
       },

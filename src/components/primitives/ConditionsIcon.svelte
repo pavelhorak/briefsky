@@ -21,15 +21,14 @@
     [ConditionsIcon.Unknown]: 'wi:na',
   };
 
-  /* Adjustments to make weather icons vertically aligned with each other */
   const ICON_ADJUSTMENT_MAP: { [key: string]: string } = {
-    'wi:day-cloudy': size === 'small' ? 'top-0.5' : 'top-2',
-    'wi:fog': size === 'small' ? '-top-0.5' : '-top-2',
-    'wi:showers': size === 'small' ? '-top-0.5' : '-top-2',
-    'wi:rain': size === 'small' ? '-top-0.5' : '-top-2',
-    'wi:sleet': size === 'small' ? '-top-0.5' : '-top-2',
-    'wi:snow': size === 'small' ? '-top-0.5' : '-top-2',
-    'wi:thunderstorm': size === 'small' ? '-top-0.5' : '-top-2',
+    'wi:day-cloudy': size === 'small' ? 'top-0.5' : size === 'large' ? 'top-2' : 'top-4',
+    'wi:fog': size === 'small' ? '-top-0.5' : size === 'large' ? '-top-2' : '-top-4',
+    'wi:showers': size === 'small' ? '-top-0.5' : size === 'large' ? '-top-2' : '-top-4',
+    'wi:rain': size === 'small' ? '-top-0.5' : size === 'large' ? '-top-2' : '-top-4',
+    'wi:sleet': size === 'small' ? '-top-0.5' : size === 'large' ? '-top-2' : '-top-4',
+    'wi:snow': size === 'small' ? '-top-0.5' : size === 'large' ? '-top-2' : '-top-4',
+    'wi:thunderstorm': size === 'small' ? '-top-0.5' : size === 'large' ? '-top-2' : '-top-4',
   };
 
   /* Icon state */
@@ -40,5 +39,10 @@
 
 <Icon
   {icon}
-  class={`relative ${ICON_ADJUSTMENT_MAP[icon] ?? ''} ` + (size === 'small' ? 'text-[30px] sm:text-[36px] -my-1.5' : 'text-[96px] sm:text-[112px] -my-6')}
+  class={`relative ${ICON_ADJUSTMENT_MAP[icon] ?? ''} ` +
+    (size === 'small'
+      ? 'text-[30px] sm:text-[36px] -my-1.5'
+      : size === 'large'
+        ? 'text-[96px] sm:text-[112px] -my-6'
+        : 'text-[154px] sm:text-[180px] -my-10')}
 />

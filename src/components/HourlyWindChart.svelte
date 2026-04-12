@@ -1,8 +1,7 @@
 <script lang="ts">
   import type { HourlyWeather } from '../providers/Provider';
-  import { configuration, Units } from '../Configuration';
 
-  import { kphToMph, degreesToCardinal } from './primitives/Wind.svelte';
+  import { kphToMs, degreesToCardinal } from './primitives/Wind.svelte';
 
   import HourlyLineChart from './primitives/HourlyLineChart.svelte';
 
@@ -13,10 +12,7 @@
 
   /* Constants */
 
-  const DEFAULT_LIMITS = {
-    [Units.Metric]: [15, 30],
-    [Units.Imperial]: [10, 20],
-  };
+  const DEFAULT_LIMITS = [5, 10, 15];
 
   /* Derived State */
 
@@ -27,11 +23,11 @@
   let limit: number;
 
   $: {
-    units = $configuration.units === Units.Imperial ? 'mph' : 'km/h';
+    units = 'm/s';
     timestamps = hourly.map((h) => h.timestamp);
-    speeds = hourly.map((h) => ($configuration.units === Units.Imperial ? kphToMph(h.wind_speed!) : h.wind_speed!));
+    speeds = hourly.map((h) => kphToMs(h.wind_speed!));
     directions = hourly.map((h) => h.wind_direction!);
-    limit = ((max) => DEFAULT_LIMITS[$configuration.units].find((lim) => max < lim) ?? max)(Math.max(...speeds));
+    limit = ((max) => DEFAULT_LIMITS.find((lim) => max < lim) ?? max)(Math.max(...speeds));
   }
 </script>
 
@@ -43,8 +39,8 @@
     {
       values: speeds,
       limit: limit,
-      valueFormatter: (value) => value.toFixed(0),
-      tooltipFormatter: (value, index) => `${value.toFixed(0)} ${units} from ${degreesToCardinal(directions[index])}`,
+      valueFormatter: (value) => value.toFixed(1),
+      tooltipFormatter: (value, index) => `${value.toFixed(1)} ${units} from ${degreesToCardinal(directions[index])}`,
       style: {
         tickClass: 'fill-gray-800 dark:fill-gray-200',
         fillClass: 'fill-gray-800 dark:fill-gray-200',

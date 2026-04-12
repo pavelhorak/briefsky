@@ -1,5 +1,6 @@
 <script lang="ts">
+  import { formatPercentage } from '../../Formatting';
   export let value: number = 0;
 </script>
 
-<span>{value.toFixed(0)}%</span>
+<span>{formatPercentage(value)}%</span>
