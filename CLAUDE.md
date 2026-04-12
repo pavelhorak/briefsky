@@ -39,17 +39,18 @@ Note: HA serves static files with `Cache-Control: max-age=2678400` (31 days). Af
 ```
 App.svelte                    — Root: routing, theme, refresh loop, inactivity timer, PWA install prompt
 ├── Dashboard.svelte          — Level 1: dual layout (landscape 16x10 grid / portrait flowing grid)
-│   ├── WeatherSummaryTile    — 6x5 weather overview (temp, wind, humidity, dew point)
-│   ├── SensorTile            — Generic sensor tile (Tesla, Solar, Climate)
-│   ├── SwitchTile            — Toggle tile (Garage, Outdoor Lights)
-│   └── Control Tile          — 2x2 grid (Camera, Settings, Theme, placeholder)
-├── DetailsOverlay.svelte     — Shared overlay wrapper (click-outside-to-close, swipe-down-to-close)
+│   ├── WeatherSummaryTile    — 8x5 weather (temp, wind, humidity, dew point, sunrise/sunset)
+│   ├── Calendar Tile         — 4x5 live clock (day, weekday, month, HH:mm)
+│   ├── Control Tile          — 4x5 2x2 grid (Camera, Settings, Theme, Fireplace toggle)
+│   ├── SensorTile            — Generic sensor tile (Climate, Energy, Tesla)
+│   └── Switches Tile         — 4x5 2x2 grid (Garage light, Garage door, Outdoor light, Gate)
+├── DetailsOverlay.svelte     — Shared overlay wrapper (click/swipe to close, compact mode for camera)
 └── *Details.svelte           — Level 2: full-screen overlays (15s auto-close)
     ├── WeatherDetails        — Forecast, charts, daily summaries
     ├── TeslaDetails          — Vehicle status & climate control
     ├── SolarDetails          — 24h production/consumption charts
-    ├── ClimateDetails        — HVAC & fireplace controls
-    ├── CameraDetails         — MJPEG live stream
+    ├── ClimateDetails        — HVAC controls (setpoint, DHW, water pressure)
+    ├── CameraDetails         — MJPEG live stream (compact overlay)
     └── SettingsDetails       — Configuration panel + Clear Cache + Install App buttons
 ```
 
@@ -57,8 +58,8 @@ App.svelte                    — Root: routing, theme, refresh loop, inactivity
 
 **Landscape** (min-aspect-ratio 4/3 AND min-width 976px):
 - Fixed 16x10 grid filling full viewport
-- Row 1 (rows 1-5): Weather 6x5 + Tesla 5x5 + Solar 5x5
-- Row 2 (rows 6-10): Climate 4x5 + Garage 4x5 + Outdoor 4x5 + Controls 4x5
+- Row 1 (rows 1-5): Weather 8x5 + Calendar 4x5 + Controls 4x5
+- Row 2 (rows 6-10): Climate 4x5 + Energy 4x5 + Tesla 4x5 + Switches 4x5
 
 **Portrait** (everything else):
 - Flowing grid: `grid-cols-2 sm:grid-cols-3`
@@ -90,11 +91,18 @@ App.svelte                    — Root: routing, theme, refresh loop, inactivity
 |---------|------|
 | Condition icon | component `size="large"` |
 | Temperature | `text-8xl` / `text-[96px]` |
-| Wind/Humidity/Dew point icons | `text-[42px]` |
+| Wind/Humidity/Dew point/Sunrise icons | `text-[34px]` |
 | Wind direction icon | `text-[55px]` |
-| Wind/Humidity/Dew point values | `text-[32px]` / `text-4xl` |
+| Wind/Humidity/Dew point/Sunrise values | `text-[26px]` / `text-[28px]` |
 
-**Sensor Tiles (Tesla, Solar, Climate):**
+**Calendar Tile:**
+| Element | Size |
+|---------|------|
+| Day of month | `text-8xl` |
+| Weekday / Month | `text-2xl` |
+| Time (HH:mm) | `text-4xl` |
+
+**Sensor Tiles (Climate, Energy, Tesla):**
 | Element | Size |
 |---------|------|
 | Main icon | `text-6xl` (60px) |
@@ -102,16 +110,10 @@ App.svelte                    — Root: routing, theme, refresh loop, inactivity
 | Sensor values | `text-4xl` (36px) |
 | Sensor units | `text-2xl` (24px) |
 
-**Switch Tiles (Garage, Outdoor):**
+**Control Tile & Switches Tile:**
 | Element | Size |
 |---------|------|
-| Icon | `text-6xl` (60px) |
-| Label | `text-[28px]` |
-
-**Control Tile:**
-| Element | Size |
-|---------|------|
-| Icons | `text-[40px]` |
+| Icons | `text-6xl` (60px) |
 
 ### File Organization
 

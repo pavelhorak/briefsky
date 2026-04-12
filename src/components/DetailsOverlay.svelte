@@ -5,9 +5,10 @@
     onClose: () => void;
     children: Snippet;
     center?: boolean;
+    compact?: boolean;
   }
 
-  let { onClose, children, center = false }: Props = $props();
+  let { onClose, children, center = false, compact = false }: Props = $props();
 
   /* Swipe-down to close */
   let touchStartY = 0;
@@ -45,7 +46,7 @@
     ontouchstart={onTouchStart}
     ontouchend={onTouchEnd}
 >
-    <div class="{center ? 'w-full' : ''} py-8 md:py-12">
+    <div class="{center ? 'w-full' : ''} {compact ? 'py-2' : 'py-8 md:py-12'}">
         {@render children()}
     </div>
 </div>

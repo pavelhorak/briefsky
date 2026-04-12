@@ -33,8 +33,8 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div on:click|stopPropagation class="cursor-default max-w-[1500px] mx-auto p-4 md:p-8">
-  <div class="bg-black rounded-3xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700 aspect-video flex items-center justify-center">
+<div on:click|stopPropagation class="cursor-default max-w-[1500px] mx-auto px-2 py-0">
+  <div class="bg-black rounded-2xl overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700 aspect-video flex items-center justify-center">
     <img 
         src={streamUrl} 
         alt="Camera Stream" 

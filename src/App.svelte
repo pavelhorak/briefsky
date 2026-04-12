@@ -149,7 +149,7 @@
         <ClimateDetails />
     </DetailsOverlay>
   {:else if activeDetails === 'camera'}
-    <DetailsOverlay onClose={closeAllDetails}>
+    <DetailsOverlay onClose={closeAllDetails} compact>
         <CameraDetails />
     </DetailsOverlay>
   {:else if activeDetails === 'settings'}

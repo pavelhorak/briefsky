@@ -43,28 +43,33 @@
         </div>
 
         <div class="flex flex-col items-center gap-2 w-full px-4">
-          <div class="flex items-center gap-2">
-            <LocalIcon id="icon-wind-sum" name="wind" class="text-[42px]" />
+          <div class="flex items-center gap-1.5">
+            <LocalIcon id="icon-wind-sum" name="wind" class="text-[34px]" />
             <Tooltip triggeredBy="#icon-wind-sum">Wind</Tooltip>
-            <div class="w-1"></div>
-            <div class="text-[32px] sm:text-4xl font-bold flex items-center text-nowrap">
+            <div class="text-[26px] sm:text-[28px] font-bold flex items-center text-nowrap">
               <Wind speed={current.wind_speed} direction={current.wind_direction} iconClass="text-[55px]" />
             </div>
           </div>
-          <div class="flex items-center gap-2">
-            <LocalIcon id="icon-humidity-sum" name="humidity" class="text-[42px]" />
+          <div class="flex items-center gap-1.5">
+            <LocalIcon id="icon-humidity-sum" name="humidity" class="text-[34px]" />
             <Tooltip triggeredBy="#icon-humidity-sum">Humidity</Tooltip>
-            <div class="w-1"></div>
-            <div class="text-[32px] sm:text-4xl font-bold flex items-center text-nowrap">
+            <div class="text-[26px] sm:text-[28px] font-bold flex items-center text-nowrap">
               <RelativeHumidity value={current.relative_humidity} />
             </div>
-            <div class="w-4"></div>
-            <LocalIcon id="icon-dewpoint-sum" name="dew-point" class="text-[42px]" />
+            <div class="w-3"></div>
+            <LocalIcon id="icon-dewpoint-sum" name="dew-point" class="text-[34px]" />
             <Tooltip triggeredBy="#icon-dewpoint-sum">Dew Point</Tooltip>
-            <div class="w-1"></div>
-            <div class="text-[32px] sm:text-4xl font-bold flex items-center text-nowrap">
+            <div class="text-[26px] sm:text-[28px] font-bold flex items-center text-nowrap">
               <Temperature value={current.dew_point_temperature} />
             </div>
+            {#if nextSunEvent}
+              <div class="w-3"></div>
+              <Icon id="icon-sun-event-sum" icon={nextSunEvent.icon} class="text-[34px]" />
+              <Tooltip triggeredBy="#icon-sun-event-sum">{nextSunEvent.type === 'sunrise' ? 'Sunrise' : 'Sunset'}</Tooltip>
+              <div class="text-[26px] sm:text-[28px] font-bold flex items-center text-nowrap">
+                <Timestamp format="time" value={nextSunEvent.timestamp} />
+              </div>
+            {/if}
           </div>
         </div>
       </div>
