@@ -73,6 +73,7 @@ export class OpenMeteoProvider implements Provider {
   static fields = [];
 
   static ENDPOINT_URL = 'https://api.open-meteo.com/v1/forecast';
+  static CACHE_TTL_MS = 20 * 60 * 1000;
   static DAILY_FIELDS = ['weathercode', 'temperature_2m_max', 'temperature_2m_min', 'sunrise', 'sunset', 'precipitation_probability_max', 'precipitation_sum'];
   static HOURLY_FIELDS = [
     'temperature_2m',
@@ -92,6 +93,9 @@ export class OpenMeteoProvider implements Provider {
   ];
 
   location: Location;
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  private cachedOpenMeteoData: any = null;
+  private cachedOpenMeteoAt = 0;
 
   constructor(location: Location) {
     this.location = location;
@@ -104,23 +108,27 @@ export class OpenMeteoProvider implements Provider {
 
     const config = loadConfiguration();
 
-    const openMeteoPromise = fetch(
-      OpenMeteoProvider.ENDPOINT_URL +
-      '?' +
-      new URLSearchParams(
-        [
-          ['latitude', this.location.latitude],
-          ['longitude', this.location.longitude],
-          ['timezone', 'auto'],
-          ['timeformat', 'unixtime'],
-          ['start_date', startDate],
-          ['end_date', endDate],
-          ['current_weather', 'true'],
-        ]
-          .concat(OpenMeteoProvider.DAILY_FIELDS.map((f) => ['daily', f]))
-          .concat(OpenMeteoProvider.HOURLY_FIELDS.map((f) => ['hourly', f])),
-      ),
-    );
+    const openMeteoCacheValid = this.cachedOpenMeteoData && currentTimestamp - this.cachedOpenMeteoAt < OpenMeteoProvider.CACHE_TTL_MS;
+
+    const openMeteoPromise = openMeteoCacheValid
+      ? null
+      : fetch(
+          OpenMeteoProvider.ENDPOINT_URL +
+            '?' +
+            new URLSearchParams(
+              [
+                ['latitude', this.location.latitude],
+                ['longitude', this.location.longitude],
+                ['timezone', 'auto'],
+                ['timeformat', 'unixtime'],
+                ['start_date', startDate],
+                ['end_date', endDate],
+                ['current_weather', 'true'],
+              ]
+                .concat(OpenMeteoProvider.DAILY_FIELDS.map((f) => ['daily', f]))
+                .concat(OpenMeteoProvider.HOURLY_FIELDS.map((f) => ['hourly', f])),
+            ),
+        );
 
     let ecowittPromise = null;
     if (config.useEcowitt && config.ecowittApiKey && config.ecowittAppKey && config.ecowittMac) {
@@ -128,25 +136,30 @@ export class OpenMeteoProvider implements Provider {
       ecowittPromise = fetch(ecowittUrl);
     }
 
-    let openMeteoResponse: Response;
+    let openMeteoResponse: Response | null = null;
     let ecowittResponse: Response | null = null;
 
     try {
-      if (ecowittPromise) {
-        [openMeteoResponse, ecowittResponse] = await Promise.all([openMeteoPromise, ecowittPromise]);
-      } else {
-        openMeteoResponse = await openMeteoPromise;
-      }
+      [openMeteoResponse, ecowittResponse] = await Promise.all([openMeteoPromise, ecowittPromise]);
     } catch (e) {
       throw new Error(`Fetching weather data: ${e.toString()}`);
     }
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
     let data: any;
-    try {
-      data = await openMeteoResponse.json();
-    } catch (e) {
-      throw new Error(`Fetching from Open-Meteo: Unexpected response data: ${e.toString()}`);
+    if (openMeteoResponse) {
+      try {
+        data = await openMeteoResponse.json();
+      } catch (e) {
+        throw new Error(`Fetching from Open-Meteo: Unexpected response data: ${e.toString()}`);
+      }
+      if (!openMeteoResponse.ok) {
+        throw new Error(`Fetching from Open-Meteo: ${data.reason}`);
+      }
+      this.cachedOpenMeteoData = data;
+      this.cachedOpenMeteoAt = currentTimestamp;
+    } else {
+      data = this.cachedOpenMeteoData;
     }
 
     let ecowittData: any = null;
@@ -156,10 +169,6 @@ export class OpenMeteoProvider implements Provider {
       } catch (e) {
         console.error('Failed to parse Ecowitt data', e);
       }
-    }
-
-    if (!openMeteoResponse.ok) {
-      throw new Error(`Fetching from Open-Meteo: ${data.reason}`);
     }
 
     const dailyData = Array.from(Array(data.daily.time.length).keys()).map((i) =>

@@ -56,7 +56,7 @@ const DEFAULT_CONFIGURATION: Configuration = {
   location: new Location('49.116899542620146', '20.28857329071142'),
   autoexpand: AutoExpand.None,
   title: '',
-  refreshInterval: 2 * 3600,
+  refreshInterval: 120,
   showHourlyPrecipitation: true,
   showHourlyWind: true,
   layout: Layout.Normal,
