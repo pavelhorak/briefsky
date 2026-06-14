@@ -3,11 +3,11 @@
   import { configuration } from '../Configuration';
   import { onMount, onDestroy } from 'svelte';
 
-  const entity_id = 'camera.camera_media_profile1';
-  
+  $: entity_id = $configuration.entityIds.camera;
+
   let timestamp = Date.now();
   let refreshInterval: number;
-  
+
   $: cameraEntity = $entities[entity_id];
   
   // Try to use the pre-authorized entity_picture if available, otherwise construct proxy URL

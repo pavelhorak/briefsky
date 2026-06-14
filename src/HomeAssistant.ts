@@ -49,9 +49,40 @@ export async function callService(domain: string, service: string, serviceData: 
   });
 }
 
+export interface StatisticsRow {
+  start: string;
+  end: string;
+  mean?: number;
+  min?: number;
+  max?: number;
+  sum?: number;
+  state?: number;
+  last_reset?: string;
+  change?: number;
+}
+
+export async function fetchStatistics(
+  entityIds: string[],
+  startTime: Date,
+  endTime: Date,
+  period: '5minute' | 'hour' | 'day' | 'week' | 'month' = 'hour',
+): Promise<Record<string, StatisticsRow[]>> {
+  if (!conn) {
+    throw new Error('Home Assistant WebSocket is not connected');
+  }
+  return await conn.sendMessagePromise<Record<string, StatisticsRow[]>>({
+    type: 'recorder/statistics_during_period',
+    start_time: startTime.toISOString(),
+    end_time: endTime.toISOString(),
+    statistic_ids: entityIds,
+    period,
+    types: ['mean', 'change', 'state'],
+  });
+}
+
 /**
  * Fetch history using REST API (standard GET request)
- * Matches successful curl command format: 
+ * Matches successful curl command format:
  * /api/history/period/YYYY-MM-DDTHH:mm:ssZ?filter_entity_id=...&end_time=YYYY-MM-DDTHH:mm:ssZ
  */
 export async function fetchHistory(entityIds: string[], startTime: Date, endTime: Date): Promise<unknown> {

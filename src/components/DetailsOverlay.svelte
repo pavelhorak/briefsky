@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { setContext, type Snippet } from 'svelte';
 
   interface Props {
     onClose: () => void;
@@ -9,6 +9,8 @@
   }
 
   let { onClose, children, center = false, compact = false }: Props = $props();
+
+  setContext<() => void>('overlay-close', onClose);
 
   /* Swipe-down to close */
   let touchStartY = 0;
@@ -46,7 +48,7 @@
     ontouchstart={onTouchStart}
     ontouchend={onTouchEnd}
 >
-    <div class="{center ? 'w-full' : ''} {compact ? 'py-2' : 'py-8 md:py-12'}">
+    <div class="{center ? 'w-full' : ''} {compact ? 'py-2' : 'py-2 md:py-4'}">
         {@render children()}
     </div>
 </div>

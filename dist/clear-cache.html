@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Briefsky — Clear Cache</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #1f2937; color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { display: flex; align-items: center; justify-content: center; }
+    main { max-width: 480px; padding: 2rem; text-align: center; }
+    h1 { margin: 0 0 1rem; font-size: 1.5rem; font-weight: 600; }
+    #log { text-align: left; background: #111827; border-radius: 0.5rem; padding: 1rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+    .ok { color: #6ee7b7; }
+    .err { color: #fca5a5; }
+    a { display: inline-block; margin-top: 1.5rem; color: #93c5fd; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Clearing Briefsky cache…</h1>
+    <div id="log"></div>
+    <a id="open" href="./">Open Briefsky</a>
+  </main>
+  <script>
+    const log = document.getElementById('log');
+    const bustHref = './?t=' + Date.now();
+    document.getElementById('open').href = bustHref;
+    function line(msg, cls) {
+      const el = document.createElement('div');
+      if (cls) el.className = cls;
+      el.textContent = msg;
+      log.appendChild(el);
+    }
+    (async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          line('Service workers: ' + regs.length);
+          for (const r of regs) {
+            await r.unregister();
+            line('  unregistered ' + (r.scope || '(no scope)'), 'ok');
+          }
+        } else {
+          line('Service workers not supported');
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          line('Caches: ' + keys.length);
+          for (const k of keys) {
+            await caches.delete(k);
+            line('  deleted ' + k, 'ok');
+          }
+        } else {
+          line('Cache API not supported');
+        }
+        try { localStorage.clear(); line('localStorage cleared', 'ok'); } catch (e) { line('localStorage: ' + e.message, 'err'); }
+        try { sessionStorage.clear(); line('sessionStorage cleared', 'ok'); } catch (e) { line('sessionStorage: ' + e.message, 'err'); }
+        line('Done. Reloading in 2s…', 'ok');
+        setTimeout(() => { window.location.replace(bustHref); }, 2000);
+      } catch (e) {
+        line('Error: ' + e.message, 'err');
+      }
+    })();
+  </script>
+</body>
+</html>

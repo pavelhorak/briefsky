@@ -1,16 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fetchHistory } from '../HomeAssistant';
+  import { fetchStatistics } from '../HomeAssistant';
   import HourlyLineChart from './primitives/HourlyLineChart.svelte';
   import { Spinner } from 'flowbite-svelte';
 
   interface HistoryChartProps {
     title: string;
-    entities: { 
-      id: string; 
-      label: string; 
-      color: string; 
-      fill: string; 
+    entities: {
+      id: string;
+      label: string;
+      color: string;
+      fill: string;
       type?: 'line' | 'bar';
       abs?: boolean;
       limit?: number;
@@ -20,73 +20,53 @@
     unit?: string;
   }
 
-  let { 
-    title, 
-    entities, 
-    height = 300, 
-    valueFormatter = (v: number) => v.toFixed(1), 
-    unit = '' 
+  let {
+    title,
+    entities,
+    height = 300,
+    valueFormatter = (v: number) => v.toFixed(1),
+    unit = ''
   }: HistoryChartProps = $props();
 
-  interface HistoryEntry {
-    entity_id: string;
-    state: string;
-    last_changed: string;
-    last_updated: string;
-    lu?: string;
-    s?: string;
-    parsedTime?: number;
-  }
-
-  let historyData = $state<{ [key: string]: HistoryEntry[] }>({});
+  let bucketValues = $state<{ [key: string]: number[] }>({});
   let loading = $state(true);
   let timestamps = $state<Date[]>([]);
   let apiError = $state('');
 
-  function parseDate(val: string | number | undefined): Date {
-    if (!val) return new Date(0);
-    if (typeof val === 'number') return new Date(val * 1000);
-    if (typeof val === 'string') {
-        const clean = val.replace(/\+00:00$/, 'Z').replace(' ', 'T');
-        const d = new Date(clean);
-        if (!isNaN(d.getTime())) return d;
-    }
-    return new Date(val);
-  }
-
   async function loadData() {
     loading = true;
     apiError = '';
-    
-    const end = new Date();
+
+    const now = new Date();
+    const end = new Date(now);
+    end.setUTCMinutes(0, 0, 0);
+    end.setUTCHours(end.getUTCHours() + 1);
     const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
     timestamps = Array.from({length: 25}, (_, i) => new Date(start.getTime() + i * 3600000));
 
     try {
       const ids = entities.map((e: { id: string }) => e.id);
-      const data = await fetchHistory(ids, start, end);
-      
-      const newHistoryData: { [key: string]: HistoryEntry[] } = {};
-      const processList = (list: HistoryEntry[]) => {
-          return list.map(e => ({
-              ...e,
-              parsedTime: parseDate(e.lu || e.last_updated || e.last_changed).getTime()
-          })).sort((a, b) => a.parsedTime! - b.parsedTime!);
-      };
+      const data = await fetchStatistics(ids, start, end, 'hour');
 
-      if (data && typeof data === 'object') {
-          if (!Array.isArray(data)) {
-              Object.entries(data as Record<string, HistoryEntry[]>).forEach(([id, list]) => {
-                  newHistoryData[id] = processList(list);
-              });
-          } else if (data.length > 0 && Array.isArray(data[0])) {
-              (data as HistoryEntry[][]).forEach((list, index) => {
-                  const id = ids[index];
-                  if (id) newHistoryData[id] = processList(list);
-              });
-          }
+      const next: { [key: string]: number[] } = {};
+      for (const config of entities) {
+        const rows = data[config.id] || [];
+        const buckets: (number | undefined)[] = Array(25).fill(undefined);
+        for (const row of rows) {
+          const t = new Date(row.start).getTime();
+          const idx = Math.round((t - start.getTime()) / 3600000);
+          if (idx < 0 || idx >= 25) continue;
+          const raw = row.mean ?? row.change ?? (row.state != null ? Number(row.state) : null);
+          if (raw == null || Number.isNaN(Number(raw))) continue;
+          buckets[idx] = config.abs ? Math.abs(Number(raw)) : Number(raw);
+        }
+        let last = 0;
+        next[config.id] = buckets.map(v => {
+          if (v !== undefined) last = v;
+          return last;
+        });
       }
-      historyData = newHistoryData;
+      bucketValues = next;
     } catch (err: unknown) {
       const error = err as Error;
       apiError = `${error.name || 'Error'}: ${error.message || String(error)}`;
@@ -103,35 +83,8 @@
     }
   });
 
-  function processHistory(entityId: string, abs: boolean): number[] {
-    const sorted = historyData[entityId] || [];
-    if (sorted.length === 0) return Array(25).fill(0);
-
-    let currentVal = 0;
-    let dataIdx = 0;
-
-    return timestamps.map(ts => {
-      const targetTime = ts.getTime();
-      
-      while (dataIdx < sorted.length) {
-        const entry = sorted[dataIdx];
-        if (entry.parsedTime! <= targetTime) {
-          const valStr = entry.s || entry.state;
-          const parsed = parseFloat(valStr);
-          if (!isNaN(parsed)) {
-            currentVal = abs ? Math.abs(parsed) : parsed;
-          }
-          dataIdx++;
-        } else {
-          break;
-        }
-      }
-      return currentVal;
-    });
-  }
-
   let datasets = $derived(entities.map((config: HistoryChartProps['entities'][0]) => {
-    const values = processHistory(config.id, config.abs ?? false);
+    const values = bucketValues[config.id] || Array(25).fill(0);
     const maxVal = Math.max(...values, config.limit || 100);
     return {
       values: values,

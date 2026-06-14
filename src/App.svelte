@@ -12,9 +12,10 @@
   import WeatherDetails from './components/WeatherDetails.svelte';
   import SettingsDetails from './components/SettingsDetails.svelte';
   import TeslaDetails from './components/TeslaDetails.svelte';
-  import SolarDetails from './components/SolarDetails.svelte';
+  import EnergyFlowDetails from './components/EnergyFlowDetails.svelte';
   import ClimateDetails from './components/ClimateDetails.svelte';
   import CameraDetails from './components/CameraDetails.svelte';
+  import CallOverlay from './components/CallOverlay.svelte';
   import { Theme } from './Configuration';
 
   /* Capture PWA install prompt before browser dismisses it */
@@ -131,6 +132,8 @@
         onSolarClick={() => openDetails('solar')}
         onClimateClick={() => openDetails('climate')}
         onCameraClick={() => openDetails('camera')}
+        onCallDadClick={() => openDetails('call-dad')}
+        onCallMomClick={() => openDetails('call-mom')}
     />
   {:else if activeDetails === 'weather'}
     <DetailsOverlay onClose={closeAllDetails}>
@@ -142,7 +145,7 @@
     </DetailsOverlay>
   {:else if activeDetails === 'solar'}
     <DetailsOverlay onClose={closeAllDetails}>
-        <SolarDetails />
+        <EnergyFlowDetails />
     </DetailsOverlay>
   {:else if activeDetails === 'climate'}
     <DetailsOverlay onClose={closeAllDetails}>
@@ -156,5 +159,9 @@
     <DetailsOverlay onClose={closeAllDetails} center>
         <SettingsDetails onSave={closeAllDetails} />
     </DetailsOverlay>
+  {:else if activeDetails === 'call-dad'}
+    <CallOverlay name={$configuration.dadName} url={$configuration.dadCallUrl} onClose={closeAllDetails} />
+  {:else if activeDetails === 'call-mom'}
+    <CallOverlay name={$configuration.momName} url={$configuration.momCallUrl} onClose={closeAllDetails} />
   {/if}
 </main>

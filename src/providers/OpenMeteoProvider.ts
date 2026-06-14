@@ -1,4 +1,4 @@
-import type { Provider, CurrentWeather, DailyWeather, Weather } from './Provider';
+import type { Provider, CurrentWeather, DailyWeather, Weather, IndoorTemperatures } from './Provider';
 import type { Location } from './Location';
 import { ConditionsIcon, PrecipitationType } from './Provider';
 import { loadConfiguration } from '../Configuration';
@@ -130,10 +130,17 @@ export class OpenMeteoProvider implements Provider {
             ),
         );
 
-    let ecowittPromise = null;
+    let ecowittPromise: Promise<Response | null> = Promise.resolve(null);
     if (config.useEcowitt && config.ecowittApiKey && config.ecowittAppKey && config.ecowittMac) {
       const ecowittUrl = `https://api.ecowitt.net/api/v3/device/real_time?application_key=${config.ecowittAppKey}&api_key=${config.ecowittApiKey}&mac=${config.ecowittMac}&call_back=all&temp_unitid=1&pressure_unitid=3&wind_speed_unitid=6&rainfall_unitid=12&solar_irradiance_unitid=14`;
-      ecowittPromise = fetch(ecowittUrl);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      ecowittPromise = fetch(ecowittUrl, { signal: controller.signal })
+        .catch((e) => {
+          console.warn('Ecowitt fetch skipped', e);
+          return null;
+        })
+        .finally(() => clearTimeout(timeoutId));
     }
 
     let openMeteoResponse: Response | null = null;
@@ -242,9 +249,22 @@ export class OpenMeteoProvider implements Provider {
           })),
       }));
 
+    let indoor_temperatures: IndoorTemperatures | undefined;
+    if (config.useEcowitt && ecowittData?.data) {
+      const livingRoom = parseFloat(ecowittData.data.temp_and_humidity_ch1?.temperature?.value);
+      const garage = parseFloat(ecowittData.data.temp_and_humidity_ch2?.temperature?.value);
+      const roof = parseFloat(ecowittData.data.indoor?.temperature?.value);
+      indoor_temperatures = {
+        living_room: Number.isFinite(livingRoom) ? livingRoom : undefined,
+        garage: Number.isFinite(garage) ? garage : undefined,
+        roof: Number.isFinite(roof) ? roof : undefined,
+      };
+    }
+
     return {
       current,
       daily,
+      indoor_temperatures,
     };
   }
 

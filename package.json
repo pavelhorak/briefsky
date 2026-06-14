@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "format": "prettier --write --plugin prettier-plugin-svelte .",
     "lint": "eslint .",
-    "check": "svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "deploy": "bash scripts/deploy.sh"
   },
   "devDependencies": {
     "@iconify/svelte": "^4.0.2",

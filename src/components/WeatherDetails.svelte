@@ -12,9 +12,13 @@
   import HourlyDetails from './HourlyDetails.svelte';
   import HourlyWindChart from './HourlyWindChart.svelte';
   import HourlyPrecipitationChart from './HourlyPrecipitationChart.svelte';
+  import EcowittHistoryChart from './EcowittHistoryChart.svelte';
 
   export let weather: Weather | undefined;
   export let error: string | undefined;
+
+  import { getContext } from 'svelte';
+  const closeOverlay = getContext<() => void>('overlay-close');
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -22,7 +26,7 @@
 <div on:click|stopPropagation class={classNames('cursor-default mx-auto', $configuration.layout === Layout.Split ? 'max-w-[1464px] px-4' : 'container')}>
   {#if weather}
     <div class="mb-4 md:mb-6 px-6">
-      <CurrentDetails current={weather.current} {weather} mode="details" />
+      <CurrentDetails current={weather.current} {weather} mode="details" onIconClick={closeOverlay} />
     </div>
 
     <div class={$configuration.layout === Layout.Split ? 'grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4 items-start' : ''}>
@@ -34,6 +38,9 @@
           {/if}
           {#if weather.current.hourly[0].wind_speed !== undefined && $configuration.showHourlyWind}
             <HourlyWindChart index={999} hourly={weather.current.hourly} />
+          {/if}
+          {#if $configuration.useEcowitt}
+            <EcowittHistoryChart />
           {/if}
         </div>
       </div>

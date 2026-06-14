@@ -11,7 +11,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="w-full h-full bg-transparent p-6 transition-all rounded-2xl overflow-hidden flex flex-col justify-center"
+  class="w-full h-full bg-transparent p-6 transition-all rounded-2xl overflow-hidden flex flex-col"
   {onclick}
 >
   {#if weather}

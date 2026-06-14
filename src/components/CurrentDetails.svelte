@@ -17,6 +17,7 @@
   export let current: CurrentWeather;
   export let weather: Weather | undefined = undefined;
   export let mode: 'summary' | 'details' = 'details';
+  export let onIconClick: (() => void) | undefined = undefined;
 
   let className: string = '';
   export { className as class };
@@ -36,46 +37,58 @@
 <div class={className}>
   {#if current}
     {#if mode === 'summary'}
-      <div class="flex flex-col items-center justify-center h-full">
-        <div class="flex items-center justify-center gap-2 mb-8">
-          <div><ConditionsIcon size="large" value={current.conditions_icon} /></div>
-          <div class="text-8xl sm:text-[96px] font-bold"><Temperature value={current.temperature} /></div>
+      <div class="flex flex-col h-full">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-xs font-semibold opacity-50 tracking-[0.2em]">WEATHER</div>
+          <ConditionsIcon size="small" value={current.conditions_icon} />
         </div>
 
-        <div class="flex flex-col items-center gap-2 w-full px-4">
-          <div class="flex items-center gap-1.5">
-            <LocalIcon id="icon-wind-sum" name="wind" class="text-[34px]" />
-            <Tooltip triggeredBy="#icon-wind-sum">Wind</Tooltip>
-            <div class="text-[26px] sm:text-[28px] font-bold flex items-center text-nowrap">
-              <Wind speed={current.wind_speed} direction={current.wind_direction} iconClass="text-[55px]" />
+        <div class="flex items-center gap-4 mb-6">
+          <ConditionsIcon size="large" value={current.conditions_icon} />
+          <div class="text-8xl sm:text-[96px] font-normal leading-none"><Temperature value={current.temperature} /></div>
+        </div>
+
+        <div class="flex-1 grid grid-cols-4 gap-6 content-center">
+          <div>
+            <div class="text-xs opacity-50 uppercase tracking-widest mb-1">Wind</div>
+            <div class="text-5xl font-normal leading-none flex items-center text-nowrap">
+              <Wind speed={current.wind_speed} direction={current.wind_direction} iconClass="text-[40px]" />
             </div>
           </div>
-          <div class="flex items-center gap-1.5">
-            <LocalIcon id="icon-humidity-sum" name="humidity" class="text-[34px]" />
-            <Tooltip triggeredBy="#icon-humidity-sum">Humidity</Tooltip>
-            <div class="text-[26px] sm:text-[28px] font-bold flex items-center text-nowrap">
-              <RelativeHumidity value={current.relative_humidity} />
-            </div>
-            <div class="w-3"></div>
-            <LocalIcon id="icon-dewpoint-sum" name="dew-point" class="text-[34px]" />
-            <Tooltip triggeredBy="#icon-dewpoint-sum">Dew Point</Tooltip>
-            <div class="text-[26px] sm:text-[28px] font-bold flex items-center text-nowrap">
-              <Temperature value={current.dew_point_temperature} />
-            </div>
-            {#if nextSunEvent}
-              <div class="w-3"></div>
-              <Icon id="icon-sun-event-sum" icon={nextSunEvent.icon} class="text-[34px]" />
-              <Tooltip triggeredBy="#icon-sun-event-sum">{nextSunEvent.type === 'sunrise' ? 'Sunrise' : 'Sunset'}</Tooltip>
-              <div class="text-[26px] sm:text-[28px] font-bold flex items-center text-nowrap">
-                <Timestamp format="time" value={nextSunEvent.timestamp} />
+          {#if weather?.indoor_temperatures}
+            {@const t = weather.indoor_temperatures}
+            <div>
+              <div class="text-xs opacity-50 uppercase tracking-widest mb-1">Living</div>
+              <div class="text-5xl font-normal leading-none">
+                {#if t.living_room !== undefined}<Temperature value={t.living_room} />{:else}--{/if}
               </div>
-            {/if}
-          </div>
+            </div>
+            <div>
+              <div class="text-xs opacity-50 uppercase tracking-widest mb-1">Garage</div>
+              <div class="text-5xl font-normal leading-none">
+                {#if t.garage !== undefined}<Temperature value={t.garage} />{:else}--{/if}
+              </div>
+            </div>
+            <div>
+              <div class="text-xs opacity-50 uppercase tracking-widest mb-1">Roof</div>
+              <div class="text-5xl font-normal leading-none">
+                {#if t.roof !== undefined}<Temperature value={t.roof} />{:else}--{/if}
+              </div>
+            </div>
+          {/if}
         </div>
       </div>
     {:else}
       <div class="grid grid-rows-2 grid-flow-col justify-center items-center mt-2 mb-4">
-        <div class="row-span-2 mr-2"><ConditionsIcon size="large" value={current.conditions_icon} /></div>
+        <div class="row-span-2 mr-2">
+          {#if onIconClick}
+            <button onclick={onIconClick} class="rounded-full p-1 hover:bg-black/5 dark:hover:bg-white/5 active:scale-90 transition-all" aria-label="Close">
+              <ConditionsIcon size="large" value={current.conditions_icon} />
+            </button>
+          {:else}
+            <ConditionsIcon size="large" value={current.conditions_icon} />
+          {/if}
+        </div>
         <div><span class="text-2xl sm:text-4xl font-semibold"><Temperature value={current.temperature} /> <Conditions value={current.conditions} /></span></div>
         <div class="flex gap-2">
           <div><span class="font-semibold">Feels Like:</span> <Temperature value={current.feels_like_temperature} /></div>

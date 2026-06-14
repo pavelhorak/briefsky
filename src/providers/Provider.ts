@@ -66,9 +66,16 @@ export interface HourlyWeather {
   precipitation_type?: PrecipitationType;
 }
 
+export interface IndoorTemperatures {
+  living_room?: number; // in C
+  garage?: number; // in C
+  roof?: number; // in C
+}
+
 export interface Weather {
   current: CurrentWeather;
   daily: DailyWeather[];
+  indoor_temperatures?: IndoorTemperatures;
 }
 
 export interface ProviderFactory {

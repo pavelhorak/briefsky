@@ -29,6 +29,135 @@ export enum Theme {
   System,
 }
 
+export interface EntityIds {
+  // Energy
+  solarPower: string;
+  loadPower: string;
+  gridPower: string;
+  backupMeter: string;
+  pvPower: string;
+  pv1Power: string;
+  pv2Power: string;
+  batterySoc: string;
+  batteryPower: string;
+  batteryState: string;
+  batteryTemp: string;
+  batterySoh: string;
+  batteryCapacity: string;
+  todaySolarProduction: string;
+  todayBatteryCharge: string;
+  todayBatteryDischarge: string;
+  todayGridImport: string;
+  todayGridExport: string;
+  todayLoad: string;
+  loadL1Power: string;
+  loadL2Power: string;
+  loadL3Power: string;
+  // Tesla
+  teslaCharging: string;
+  teslaChargingCable: string;
+  teslaBattery: string;
+  teslaInteriorTemp: string;
+  teslaOutsideTemp: string;
+  teslaRange: string;
+  teslaChargeLimit: string;
+  teslaChargeCurrent: string;
+  teslaChargeVoltage: string;
+  teslaChargePower: string;
+  teslaAddedEnergy: string;
+  teslaTimeToFull: string;
+  teslaClimate: string;
+  teslaDefrost: string;
+  teslaSentryMode: string;
+  teslaLock: string;
+  teslaChargePortLock: string;
+  teslaChargePort: string;
+  teslaTrunk: string;
+  teslaFrunk: string;
+  teslaWindows: string;
+  // Climate (HVAC)
+  hvacClimate: string;
+  hvacActive: string;
+  fireplaceSwitch: string;
+  scheduleSetpoint: string;
+  scheduleNextSetpoint: string;
+  scheduleNextSetpointTime: string;
+  dhwTemp: string;
+  dhwActive: string;
+  dhwStatus: string;
+  waterPressure: string;
+  // Camera
+  camera: string;
+  // Switches
+  garageLight: string;
+  outdoorLight: string;
+  garageDoor: string;
+  gateOpen: string;
+  gateClose: string;
+}
+
+export const DEFAULT_ENTITY_IDS: EntityIds = {
+  solarPower: 'sensor.inverter_power',
+  loadPower: 'sensor.inverter_load_power',
+  gridPower: 'sensor.inverter_external_power',
+  backupMeter: 'sensor.vue_123_1min',
+  pvPower: 'sensor.inverter_pv_power',
+  pv1Power: 'sensor.inverter_pv1_power',
+  pv2Power: 'sensor.inverter_pv2_power',
+  batterySoc: 'sensor.inverter_battery',
+  batteryPower: 'sensor.inverter_battery_power',
+  batteryState: 'sensor.inverter_battery_state',
+  batteryTemp: 'sensor.inverter_battery_temperature',
+  batterySoh: 'sensor.inverter_battery_soh',
+  batteryCapacity: 'sensor.inverter_battery_capacity',
+  todaySolarProduction: 'sensor.inverter_today_production',
+  todayBatteryCharge: 'sensor.inverter_today_battery_charge',
+  todayBatteryDischarge: 'sensor.inverter_today_battery_discharge',
+  todayGridImport: 'sensor.inverter_today_energy_import',
+  todayGridExport: 'sensor.inverter_today_energy_export',
+  todayLoad: 'sensor.inverter_today_load_consumption',
+  loadL1Power: 'sensor.inverter_load_l1_power',
+  loadL2Power: 'sensor.inverter_load_l2_power',
+  loadL3Power: 'sensor.inverter_load_l3_power',
+  teslaCharging: 'sensor.juniper_nabija_sa',
+  teslaChargingCable: 'binary_sensor.juniper_nabijaci_kabel',
+  teslaBattery: 'sensor.juniper_uroven_baterie',
+  teslaInteriorTemp: 'sensor.juniper_vnutorna_teplota',
+  teslaOutsideTemp: 'sensor.juniper_vonkajsia_teplota',
+  teslaRange: 'sensor.juniper_rozsah_baterie',
+  teslaChargeLimit: 'number.juniper_limit_nabijania',
+  teslaChargeCurrent: 'sensor.juniper_nabijaci_prud',
+  teslaChargeVoltage: 'sensor.juniper_napatie_nabijacky',
+  teslaChargePower: 'sensor.juniper_vykon_nabijacky',
+  teslaAddedEnergy: 'sensor.juniper_pridana_energia_nabijania',
+  teslaTimeToFull: 'sensor.juniper_cas_do_uplneho_nabitia',
+  teslaClimate: 'climate.juniper_klimatizacia',
+  teslaDefrost: 'switch.juniper_odmrazovanie',
+  teslaSentryMode: 'switch.juniper_rezim_strazenia',
+  teslaLock: 'lock.juniper_zamok',
+  teslaChargePortLock: 'lock.juniper_zamok_nabijacieho_kabla',
+  teslaChargePort: 'cover.juniper_dvierka_nabijacieho_portu',
+  teslaTrunk: 'cover.juniper_kufor',
+  teslaFrunk: 'cover.juniper_kufor_2',
+  teslaWindows: 'cover.juniper_windows',
+  hvacClimate: 'climate.circa',
+  hvacActive: 'binary_sensor.circa_status',
+  fireplaceSwitch: 'switch.circa_fireplace_mode',
+  scheduleSetpoint: 'sensor.circa_current_schedule_setpoint',
+  scheduleNextSetpoint: 'sensor.circa_next_setpoint',
+  scheduleNextSetpointTime: 'sensor.circa_next_setpoint_time',
+  dhwTemp: 'sensor.dhw_water_temperature',
+  dhwActive: 'binary_sensor.dhw_status',
+  dhwStatus: 'sensor.dhw_status',
+  waterPressure: 'sensor.home_water_pressure',
+  camera: 'camera.camera_media_profile1',
+  garageLight: 'switch.sonoff_1001e97b61',
+  outdoorLight: 'switch.sonoff_outdoor_lights',
+  garageDoor: 'switch.garage_door',
+  gateOpen: 'switch.sonoff_10024889f6_1',
+  gateClose: 'switch.sonoff_1002487ede_1',
+};
+
 export interface Configuration {
   providerFactory: ProviderFactory;
   providerParams: { [key: string]: string };
@@ -47,6 +176,11 @@ export interface Configuration {
   ecowittApiKey: string;
   ecowittMac: string;
   useEcowitt: boolean;
+  dadName: string;
+  dadCallUrl: string;
+  momName: string;
+  momCallUrl: string;
+  entityIds: EntityIds;
 }
 
 const DEFAULT_CONFIGURATION: Configuration = {
@@ -67,6 +201,11 @@ const DEFAULT_CONFIGURATION: Configuration = {
   ecowittApiKey: 'da53865d-43ca-4d6c-b026-bf7206001bcb',
   ecowittMac: '80:64:6F:3E:F9:43',
   useEcowitt: true,
+  dadName: 'Dad',
+  dadCallUrl: 'https://meet.google.com/vxf-ispq-reo',
+  momName: 'Mom',
+  momCallUrl: '',
+  entityIds: DEFAULT_ENTITY_IDS,
 };
 
 function decodeConfiguration(params: { [key: string]: string }): Configuration {
@@ -94,6 +233,18 @@ function decodeConfiguration(params: { [key: string]: string }): Configuration {
   const ecowittApiKey = params['ecowitt_api_key'] || DEFAULT_CONFIGURATION.ecowittApiKey;
   const ecowittMac = params['ecowitt_mac'] || DEFAULT_CONFIGURATION.ecowittMac;
   const useEcowitt = params['use_ecowitt'] === undefined ? DEFAULT_CONFIGURATION.useEcowitt : params['use_ecowitt'] === 'true' ? true : false;
+  const dadName = params['dad_name'] || DEFAULT_CONFIGURATION.dadName;
+  const dadCallUrl = params['dad_call_url'] || DEFAULT_CONFIGURATION.dadCallUrl;
+  const momName = params['mom_name'] || DEFAULT_CONFIGURATION.momName;
+  const momCallUrl = params['mom_call_url'] || DEFAULT_CONFIGURATION.momCallUrl;
+  let entityIds: EntityIds = DEFAULT_ENTITY_IDS;
+  if (params['entity_ids']) {
+    try {
+      entityIds = { ...DEFAULT_ENTITY_IDS, ...JSON.parse(params['entity_ids']) };
+    } catch {
+      entityIds = DEFAULT_ENTITY_IDS;
+    }
+  }
   const theme =
     params['theme'] === 'light'
       ? Theme.Light
@@ -121,6 +272,11 @@ function decodeConfiguration(params: { [key: string]: string }): Configuration {
     ecowittApiKey,
     ecowittMac,
     useEcowitt,
+    dadName,
+    dadCallUrl,
+    momName,
+    momCallUrl,
+    entityIds,
   };
 }
 
@@ -173,6 +329,27 @@ function encodeConfiguration(configuration: Configuration): object {
   }
   if (configuration.useEcowitt !== DEFAULT_CONFIGURATION.useEcowitt) {
     params['use_ecowitt'] = configuration.useEcowitt.toString();
+  }
+  if (configuration.dadName !== DEFAULT_CONFIGURATION.dadName) {
+    params['dad_name'] = configuration.dadName;
+  }
+  if (configuration.dadCallUrl !== DEFAULT_CONFIGURATION.dadCallUrl) {
+    params['dad_call_url'] = configuration.dadCallUrl;
+  }
+  if (configuration.momName !== DEFAULT_CONFIGURATION.momName) {
+    params['mom_name'] = configuration.momName;
+  }
+  if (configuration.momCallUrl !== DEFAULT_CONFIGURATION.momCallUrl) {
+    params['mom_call_url'] = configuration.momCallUrl;
+  }
+  const overriddenIds: Partial<EntityIds> = {};
+  for (const k of Object.keys(DEFAULT_ENTITY_IDS) as (keyof EntityIds)[]) {
+    if (configuration.entityIds[k] !== DEFAULT_ENTITY_IDS[k]) {
+      overriddenIds[k] = configuration.entityIds[k];
+    }
+  }
+  if (Object.keys(overriddenIds).length > 0) {
+    params['entity_ids'] = JSON.stringify(overriddenIds);
   }
 
   return params;
