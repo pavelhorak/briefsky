@@ -30,6 +30,14 @@ export function formatPercentage(value: number | null | undefined): string {
 }
 
 /**
+ * For energy amounts in kWh (meters, virtual battery), one decimal, sign preserved.
+ */
+export function formatKilowattHours(kwhValue: number | null | undefined): string {
+  if (kwhValue === null || kwhValue === undefined || isNaN(kwhValue)) return '--';
+  return kwhValue.toFixed(1);
+}
+
+/**
  * For energy, show decimals only if absolute number of value is more then 1000W and use kW unit,
  * no decimals otherwise and use W unit.
  */

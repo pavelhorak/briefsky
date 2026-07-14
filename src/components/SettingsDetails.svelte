@@ -33,6 +33,8 @@
   let ecowittApiKey: string = currentConfiguration.ecowittApiKey;
   let ecowittMac: string = currentConfiguration.ecowittMac;
   let useEcowitt: boolean = currentConfiguration.useEcowitt;
+  let vbSeedDate: string = currentConfiguration.vbSeedDate;
+  let vbSeedBalance: string = currentConfiguration.vbSeedBalance.toString();
 
   function handleSave() {
     let configuration: Configuration = {
@@ -49,6 +51,8 @@
       ecowittApiKey,
       ecowittMac,
       useEcowitt,
+      vbSeedDate: vbSeedDate || currentConfiguration.vbSeedDate,
+      vbSeedBalance: Number.isFinite(parseFloat(vbSeedBalance)) ? parseFloat(vbSeedBalance) : currentConfiguration.vbSeedBalance,
     };
 
     storeConfiguration(configuration);
@@ -111,6 +115,15 @@
         <div>
           <Label for="ha-token" class="mb-2">Long-Lived Access Token</Label>
           <Input id="ha-token" type="text" bind:value={haToken} placeholder="Your HA Long-Lived Access Token" />
+        </div>
+        <Hr />
+        <div>
+          <Label for="vb-seed-date" class="mb-2">Virtual Battery — Statement Date</Label>
+          <Input id="vb-seed-date" type="date" bind:value={vbSeedDate} />
+        </div>
+        <div>
+          <Label for="vb-seed-balance" class="mb-2">Virtual Battery — Balance on Statement Date (kWh)</Label>
+          <Input id="vb-seed-balance" type="number" step="0.001" bind:value={vbSeedBalance} placeholder="308.972" />
         </div>
       </div>
     </TabItem>

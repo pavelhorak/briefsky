@@ -1,6 +1,12 @@
 const config = {
   content: ['./src/**/*.{html,js,svelte,ts}', './node_modules/flowbite-svelte/**/*.{html,js,svelte,ts}'],
 
+  // Touch devices emulate :hover on tap and it sticks until the next touch, leaving
+  // buttons (e.g. the Gate pill) looking pressed — only apply hover: styles on real pointers
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
+
   theme: {
     screens: {
       sm: '480px',

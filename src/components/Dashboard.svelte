@@ -7,8 +7,8 @@
   import SensorTile from './primitives/SensorTile.svelte';
   import SwitchTile from './primitives/SwitchTile.svelte';
   import EnergyFlowTile from './EnergyFlowTile.svelte';
-  import { formatPercentage, formatTemperature, formatEnergy } from '../Formatting';
-  import { pvWatts, consumptionWatts, gridWatts, batterySoc, isGridImporting } from '../EnergyState';
+  import EnergyFlowDiagram from './EnergyFlowDiagram.svelte';
+  import { formatPercentage, formatTemperature } from '../Formatting';
   import { onMount, onDestroy } from 'svelte';
 
   export let weather: Weather | undefined;
@@ -37,15 +37,6 @@
     const domain = entity_id.split('.')[0];
     await callService(domain, 'toggle', { entity_id });
   };
-
-  $: energySolar = formatEnergy($pvWatts);
-  $: energyHome  = formatEnergy($consumptionWatts);
-  $: energyGrid  = formatEnergy(Math.abs($gridWatts));
-
-  $: batteryStateStr = $entities[ids.batteryState]?.state?.toLowerCase() || '';
-  $: batteryCharging = batteryStateStr.startsWith('charg');
-  $: batteryDischarging = batteryStateStr.startsWith('disch');
-  $: batteryArrow = batteryCharging ? 'mdi:arrow-up' : batteryDischarging ? 'mdi:arrow-down' : '';
 
   $: cablePlugged = $entities[ids.teslaChargingCable]?.state === 'on';
   $: isCharging = $entities[ids.teslaCharging]?.state?.toLowerCase() === 'charging';
@@ -241,47 +232,24 @@
     <!-- Weather hero -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div role="button" tabindex="0"
-      class="col-start-1 col-span-10 row-start-2 row-span-5 bg-white dark:bg-gray-900 rounded-3xl overflow-hidden cursor-pointer active:scale-[0.99] transition"
+      class="col-start-1 col-span-8 row-start-2 row-span-5 bg-white dark:bg-gray-900 rounded-3xl overflow-hidden cursor-pointer active:scale-[0.99] transition"
       onclick={onWeatherClick}
       onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && onWeatherClick()}>
       <WeatherSummaryTile {weather} />
     </div>
 
-    <!-- Energy stats -->
+    <!-- Energy flow diagram — direction shown by animated dots, no need for separate arrows -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div role="button" tabindex="0"
-      class="col-start-11 col-span-6 row-start-2 row-span-5 bg-white dark:bg-gray-900 rounded-3xl p-6 cursor-pointer active:scale-[0.99] transition flex flex-col"
+      class="col-start-9 col-span-8 row-start-2 row-span-5 bg-white dark:bg-gray-900 rounded-3xl p-6 cursor-pointer active:scale-[0.99] transition flex flex-col"
       onclick={onSolarClick}
       onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && onSolarClick()}>
-      <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center justify-between mb-2">
         <div class="text-xs font-semibold opacity-50 tracking-[0.2em]">ENERGY</div>
         <Icon icon="mdi:lightning-bolt-outline" class="text-3xl opacity-60" />
       </div>
-      <div class="flex-1 grid grid-cols-2 gap-x-6 gap-y-2 content-center">
-        <div>
-          <div class="text-xs opacity-50 uppercase tracking-widest mb-1">Solar</div>
-          <div class="text-5xl font-normal leading-none">{energySolar.value}<span class="text-2xl opacity-50 ml-2">{energySolar.unit}</span></div>
-        </div>
-        <div>
-          <div class="text-xs opacity-50 uppercase tracking-widest mb-1">Home</div>
-          <div class="text-5xl font-normal leading-none">{energyHome.value}<span class="text-2xl opacity-50 ml-2">{energyHome.unit}</span></div>
-        </div>
-        <div>
-          <div class="text-xs opacity-50 uppercase tracking-widest mb-1">Grid</div>
-          <div class="text-5xl font-normal leading-none flex items-center">
-            <Icon icon={$isGridImporting ? 'mdi:arrow-down' : 'mdi:arrow-up'} class="text-3xl mr-1 opacity-70" />
-            <span>{energyGrid.value}<span class="text-2xl opacity-50 ml-2">{energyGrid.unit}</span></span>
-          </div>
-        </div>
-        <div>
-          <div class="text-xs opacity-50 uppercase tracking-widest mb-1">Battery</div>
-          <div class="text-5xl font-normal leading-none flex items-center">
-            {#if batteryArrow}
-              <Icon icon={batteryArrow} class="text-3xl mr-1 opacity-70" />
-            {/if}
-            <span>{formatPercentage($batterySoc)}<span class="text-2xl opacity-50 ml-2">%</span></span>
-          </div>
-        </div>
+      <div class="flex-1 flex items-center justify-center min-h-0">
+        <EnergyFlowDiagram wide />
       </div>
     </div>
 
@@ -355,7 +323,7 @@
           } }
       ] as sw (sw.label)}
         {@const on = $entities[sw.entity]?.state === 'on'}
-        <button onclick={sw.action}
+        <button onclick={(e) => { sw.action(); e.currentTarget.blur(); }}
           class="flex items-center gap-3 px-5 py-2 rounded-2xl bg-transparent hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 transition whitespace-nowrap appearance-none focus:outline-none focus-visible:outline-none focus:ring-0 focus:shadow-none">
           <Icon icon={on ? sw.onIcon : sw.offIcon} class="text-4xl {on ? 'opacity-100' : 'opacity-40'}" />
           <span class="text-lg font-medium {on ? 'opacity-100' : 'opacity-50'}">{sw.label}</span>

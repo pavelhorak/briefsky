@@ -48,7 +48,7 @@ App.svelte                    — Root: routing, theme, refresh loop, inactivity
 └── *Details.svelte           — Level 2: full-screen overlays (15s auto-close)
     ├── WeatherDetails        — Forecast, charts, daily summaries
     ├── TeslaDetails          — Vehicle status & climate control
-    ├── SolarDetails          — 24h production/consumption charts
+    ├── EnergyFlowDetails     — Energy flow diagram, today stats, virtual battery, 24h charts (SolarDetails.svelte is unused legacy)
     ├── ClimateDetails        — HVAC controls (setpoint, DHW, water pressure)
     ├── CameraDetails         — MJPEG live stream (compact overlay)
     └── SettingsDetails       — Configuration panel + Clear Cache + Install App buttons
@@ -72,7 +72,8 @@ App.svelte                    — Root: routing, theme, refresh loop, inactivity
 - **Dual Weather Engine**: Open-Meteo forecast + Ecowitt real-time data fetched in parallel via `Promise.all()`, with Ecowitt values overriding forecast when available.
 - **Configuration Persistence** (`src/Configuration.ts`): Stored in URL query params (shareable) or LocalStorage. Only non-default values are encoded. `haUrl` defaults to `window.location.origin` when empty.
 - **Home Assistant** (`src/HomeAssistant.ts`): WebSocket for real-time entity state, REST API for 24h history charts. Service workers only work over HTTPS (Cloudflare tunnel) or localhost.
-- **Formatting** (`src/Formatting.ts`): Centralized display rules — temperature (adaptive decimals), wind, percentage, energy (W/kW auto-scaling). All formatters handle `null`/`undefined`/`NaN` gracefully, returning `'--'`.
+- **Formatting** (`src/Formatting.ts`): Centralized display rules — temperature (adaptive decimals), wind, percentage, energy (W/kW auto-scaling), kWh amounts. All formatters handle `null`/`undefined`/`NaN` gracefully, returning `'--'`.
+- **Virtual Battery** (`src/VirtualBattery.ts`): Reproduces the utility's net-metering balance (`balance = statement balance + grid export − grid import`) from HA long-term statistics (`recorder/statistics_during_period`, monthly period) on the cumulative `inverter_total_energy_import/export` meters, topped up with live meter states. Seeded via `vbSeedDate`/`vbSeedBalance` config (Settings → Home Assistant tab), updated from each utility statement. Refreshes on HA connect + every 5 min. Balance shown above the grid node in EnergyFlowDiagram (dashboard tile + details) and as a card with monthly flows in EnergyFlowDetails. Validated against the June 2026 statement: inverter meters read ~1–2% above the distribution meter (balance within ~0.5%/month).
 - **PWA Install**: `beforeinstallprompt` event captured in App.svelte, deferred prompt stored on `window.__briefsky_deferred_prompt`, triggered via "Install App" button in Settings.
 
 ### Design Standards
@@ -122,6 +123,7 @@ src/
 ├── Configuration.ts          — Config store, enums, persistence
 ├── Formatting.ts             — Display formatting rules (null-safe)
 ├── HomeAssistant.ts          — HA WebSocket + REST integration
+├── VirtualBattery.ts         — Utility net-metering balance from HA statistics (monthly reset)
 ├── providers/
 │   ├── Provider.ts           — Interfaces (ProviderFactory, Provider, Weather types)
 │   ├── Location.ts           — Location class, geolocation

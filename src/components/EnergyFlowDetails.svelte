@@ -1,14 +1,21 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
-  import { getContext } from 'svelte';
+  import { getContext, onMount } from 'svelte';
   import { configuration } from '../Configuration';
   import { entities } from '../HomeAssistant';
   import { consumptionEntityId, gridEntityId } from '../EnergyState';
-  import { formatEnergy } from '../Formatting';
+  import { formatEnergy, formatKilowattHours } from '../Formatting';
+  import { virtualBattery, refreshVirtualBattery } from '../VirtualBattery';
   import EnergyFlowDiagram from './EnergyFlowDiagram.svelte';
   import SensorHistoryChart from './SensorHistoryChart.svelte';
 
   const closeOverlay = getContext<() => void>('overlay-close');
+
+  onMount(() => {
+    refreshVirtualBattery();
+  });
+
+  const monthName = new Date().toLocaleDateString('en-US', { month: 'long' });
 
   $: ids = $configuration.entityIds;
 
@@ -142,6 +149,31 @@
           <div class="flex justify-between"><span class="opacity-70">L1</span><span>{w(loadL1)}</span></div>
           <div class="flex justify-between"><span class="opacity-70">L2</span><span>{w(loadL2)}</span></div>
           <div class="flex justify-between"><span class="opacity-70">L3</span><span>{w(loadL3)}</span></div>
+        </div>
+      </div>
+
+      <!-- Virtual battery: net-metering balance at the utility, monthly flows reset each calendar month -->
+      <div class="col-span-2 bg-white dark:bg-gray-900 rounded-2xl p-3 md:p-4 shadow-lg border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <Icon icon="mdi:battery-plus-variant" class="text-2xl text-violet-500 dark:text-violet-300" />
+            <span class="font-semibold text-sm md:text-base">Virtual Battery</span>
+          </div>
+          <span class="text-[10px] md:text-xs opacity-60 uppercase">since {$configuration.vbSeedDate}</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 mt-1">
+          <div>
+            <div class="text-2xl md:text-3xl font-bold">{formatKilowattHours($virtualBattery.balance)}<span class="text-xs opacity-60 ml-1">kWh</span></div>
+            <div class="text-[10px] md:text-xs opacity-60 uppercase">Balance</div>
+          </div>
+          <div>
+            <div class="text-lg md:text-xl font-bold">{formatKilowattHours($virtualBattery.monthExport)}<span class="text-xs opacity-60 ml-1">kWh</span></div>
+            <div class="text-[10px] md:text-xs opacity-60 uppercase">Stored ({monthName})</div>
+          </div>
+          <div>
+            <div class="text-lg md:text-xl font-bold">{formatKilowattHours($virtualBattery.monthImport)}<span class="text-xs opacity-60 ml-1">kWh</span></div>
+            <div class="text-[10px] md:text-xs opacity-60 uppercase">Used ({monthName})</div>
+          </div>
         </div>
       </div>
     </div>

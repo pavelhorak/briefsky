@@ -49,6 +49,8 @@ export interface EntityIds {
   todayBatteryDischarge: string;
   todayGridImport: string;
   todayGridExport: string;
+  totalGridImport: string;
+  totalGridExport: string;
   todayLoad: string;
   loadL1Power: string;
   loadL2Power: string;
@@ -115,6 +117,8 @@ export const DEFAULT_ENTITY_IDS: EntityIds = {
   todayBatteryDischarge: 'sensor.inverter_today_battery_discharge',
   todayGridImport: 'sensor.inverter_today_energy_import',
   todayGridExport: 'sensor.inverter_today_energy_export',
+  totalGridImport: 'sensor.inverter_total_energy_import',
+  totalGridExport: 'sensor.inverter_total_energy_export',
   todayLoad: 'sensor.inverter_today_load_consumption',
   loadL1Power: 'sensor.inverter_load_l1_power',
   loadL2Power: 'sensor.inverter_load_l2_power',
@@ -180,6 +184,10 @@ export interface Configuration {
   dadCallUrl: string;
   momName: string;
   momCallUrl: string;
+  /* Virtual battery seed: balance (kWh) stated on the utility statement, valid as of the seed date (local midnight).
+     Current balance = seed balance + grid export - grid import accumulated since that date. */
+  vbSeedDate: string;
+  vbSeedBalance: number;
   entityIds: EntityIds;
 }
 
@@ -205,6 +213,8 @@ const DEFAULT_CONFIGURATION: Configuration = {
   dadCallUrl: 'https://meet.google.com/vxf-ispq-reo',
   momName: 'Mom',
   momCallUrl: '',
+  vbSeedDate: '2026-07-01',
+  vbSeedBalance: 308.972,
   entityIds: DEFAULT_ENTITY_IDS,
 };
 
@@ -237,6 +247,8 @@ function decodeConfiguration(params: { [key: string]: string }): Configuration {
   const dadCallUrl = params['dad_call_url'] || DEFAULT_CONFIGURATION.dadCallUrl;
   const momName = params['mom_name'] || DEFAULT_CONFIGURATION.momName;
   const momCallUrl = params['mom_call_url'] || DEFAULT_CONFIGURATION.momCallUrl;
+  const vbSeedDate = params['vb_seed_date'] || DEFAULT_CONFIGURATION.vbSeedDate;
+  const vbSeedBalance = Number.isFinite(parseFloat(params['vb_seed_balance'])) ? parseFloat(params['vb_seed_balance']) : DEFAULT_CONFIGURATION.vbSeedBalance;
   let entityIds: EntityIds = DEFAULT_ENTITY_IDS;
   if (params['entity_ids']) {
     try {
@@ -276,6 +288,8 @@ function decodeConfiguration(params: { [key: string]: string }): Configuration {
     dadCallUrl,
     momName,
     momCallUrl,
+    vbSeedDate,
+    vbSeedBalance,
     entityIds,
   };
 }
@@ -341,6 +355,12 @@ function encodeConfiguration(configuration: Configuration): object {
   }
   if (configuration.momCallUrl !== DEFAULT_CONFIGURATION.momCallUrl) {
     params['mom_call_url'] = configuration.momCallUrl;
+  }
+  if (configuration.vbSeedDate !== DEFAULT_CONFIGURATION.vbSeedDate) {
+    params['vb_seed_date'] = configuration.vbSeedDate;
+  }
+  if (configuration.vbSeedBalance !== DEFAULT_CONFIGURATION.vbSeedBalance) {
+    params['vb_seed_balance'] = configuration.vbSeedBalance.toString();
   }
   const overriddenIds: Partial<EntityIds> = {};
   for (const k of Object.keys(DEFAULT_ENTITY_IDS) as (keyof EntityIds)[]) {

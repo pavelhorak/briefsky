@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
   import { formatEnergy, formatPercentage } from '../Formatting';
+  import { virtualBattery } from '../VirtualBattery';
   import { entities } from '../HomeAssistant';
   import { configuration } from '../Configuration';
   import {
@@ -16,20 +17,29 @@
   /** When true: smaller nodes, no secondary labels — for the dashboard tile.
       When false: full-size nodes + status labels — for the details overlay. */
   export let compact: boolean = false;
+  /** When true: wide 2:1 layout (rectangle) with horizontal text next to icons.
+      When false: square radial layout. */
+  export let wide: boolean = false;
   let className: string = '';
   export { className as class };
 
-  /* SVG viewBox is 200x200; the four nodes sit at the midpoint of each edge,
-     inset slightly so their HTML circles overlay them cleanly. */
-  const SIZE = 200;
-  const C = SIZE / 2;
-  const EDGE_INSET = 32;          // distance from edge to node center (16% inset)
+  /* Square: 200x200, all nodes inset 32 from edge.
+     Wide:   400x200, nodes pushed further apart horizontally for a rectangle. */
+  const WIDTH = wide ? 400 : 200;
+  const HEIGHT = 200;
+  const CX = WIDTH / 2;
+  const CY = HEIGHT / 2;
+  const EDGE_INSET = wide ? 50 : 32;
+  const TOP_INSET = wide ? 40 : 32;
+
+  const SOLAR_X = wide ? WIDTH / 3 : CX;
+  const HOME_X  = wide ? WIDTH / 3 : CX;
 
   const NODES = {
-    solar:   { x: C,                  y: EDGE_INSET            },
-    grid:    { x: EDGE_INSET,         y: C                     },
-    battery: { x: SIZE - EDGE_INSET,  y: C                     },
-    home:    { x: C,                  y: SIZE - EDGE_INSET     },
+    solar:   { x: SOLAR_X,              y: TOP_INSET             },
+    grid:    { x: EDGE_INSET,           y: CY                    },
+    battery: { x: WIDTH - EDGE_INSET,   y: CY                    },
+    home:    { x: HOME_X,               y: HEIGHT - TOP_INSET    },
   } as const;
 
   const HUB_R = 6;
@@ -37,15 +47,15 @@
   const LINE_OFFSET_FROM_HUB  = HUB_R + 1;
 
   function makeLine(from: { x: number; y: number }) {
-    const dx = C - from.x;
-    const dy = C - from.y;
+    const dx = CX - from.x;
+    const dy = CY - from.y;
     const len = Math.hypot(dx, dy);
     const ux = dx / len, uy = dy / len;
     return {
       x1: from.x + ux * LINE_OFFSET_FROM_NODE,
       y1: from.y + uy * LINE_OFFSET_FROM_NODE,
-      x2: C - ux * LINE_OFFSET_FROM_HUB,
-      y2: C - uy * LINE_OFFSET_FROM_HUB,
+      x2: CX - ux * LINE_OFFSET_FROM_HUB,
+      y2: CY - uy * LINE_OFFSET_FROM_HUB,
     };
   }
 
@@ -133,21 +143,25 @@
      Compact (tile) is ~2x larger than before so values are easily readable. */
   $: circleSize = compact
     ? 'w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24'
-    : 'w-20 h-20 md:w-28 md:h-28';
+    : 'w-14 h-14 md:w-20 md:h-20';
   $: iconSize = compact
     ? 'text-4xl md:text-5xl lg:text-6xl'
-    : 'text-5xl md:text-6xl';
+    : 'text-3xl md:text-4xl';
   $: valueSize = compact ? 'text-2xl md:text-3xl lg:text-4xl' : 'text-3xl md:text-4xl';
   $: unitSize  = compact ? 'text-base md:text-lg lg:text-xl' : 'text-lg md:text-xl';
   $: labelSize = compact ? 'text-xs md:text-sm' : 'text-sm md:text-base';
+  /* Virtual battery balance above the grid node — half the size of node values */
+  $: vbValueSize = compact ? 'text-sm md:text-base lg:text-lg' : 'text-lg md:text-xl';
+  $: vbUnitSize  = compact ? 'text-xs' : 'text-sm';
+  $: vbIconSize  = compact ? 'text-base md:text-lg lg:text-xl' : 'text-xl md:text-2xl';
 
-  /* Node anchor percentage = SVG coord / SIZE * 100, applied via inline style. */
-  function pctX(n: { x: number }) { return (n.x / SIZE) * 100; }
-  function pctY(n: { y: number }) { return (n.y / SIZE) * 100; }
+  /* Node anchor percentage = SVG coord / dimension * 100, applied via inline style. */
+  function pctX(n: { x: number }) { return (n.x / WIDTH) * 100; }
+  function pctY(n: { y: number }) { return (n.y / HEIGHT) * 100; }
 </script>
 
-<div class="relative w-full h-full aspect-square {className}">
-  <svg viewBox="0 0 {SIZE} {SIZE}" class="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+<div class="relative {wide ? 'w-full aspect-[2/1] max-h-full' : 'h-full aspect-square'} {className}">
+  <svg viewBox="0 0 {WIDTH} {HEIGHT}" class="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
     {#each LINE_KEYS as key (key)}
       {@const line = LINES[key]}
       {@const flow = key === 'solar' ? solarFlow : key === 'grid' ? gridFlow : key === 'battery' ? batteryFlow : homeFlow}
@@ -170,33 +184,46 @@
         {/each}
       {/if}
     {/each}
-    <circle cx={C} cy={C} r={HUB_R} class="fill-gray-50 dark:fill-gray-800 stroke-gray-300 dark:stroke-gray-600" stroke-width="1" />
+    <circle cx={CX} cy={CY} r={HUB_R} class="fill-gray-50 dark:fill-gray-800 stroke-gray-300 dark:stroke-gray-600" stroke-width="1" />
   </svg>
 
   <!-- HTML overlay nodes — positioned to match SVG node centers -->
   <div class="absolute inset-0 pointer-events-none">
-    <!-- Solar (top node — text BELOW icon, toward center) -->
-    <div class="absolute flex flex-col items-center" style="left:{pctX(NODES.solar)}%; top:{pctY(NODES.solar)}%; transform:translate(-50%, -50%);">
-      <div class="{circleSize} rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center shadow-sm">
+    <!-- Solar (top node) -->
+    {#if wide}
+      <div class="absolute {circleSize} rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center shadow-sm"
+           style="left:{pctX(NODES.solar)}%; top:{pctY(NODES.solar)}%; transform:translate(-50%, -50%);">
         <Icon icon="mdi:solar-power-variant" class="{iconSize} text-gray-800 dark:text-gray-50" />
       </div>
-      <div class="text-center mt-0.5 leading-tight">
+      <div class="absolute text-left leading-tight whitespace-nowrap"
+           style="left:{pctX(NODES.solar)}%; top:{pctY(NODES.solar)}%; transform:translate(4rem, -50%);">
         <div class="font-semibold {valueSize}">{solarVal.value}<span class="{unitSize} opacity-70 ml-0.5">{solarVal.unit}</span></div>
-        <div class="{labelSize} opacity-60 uppercase tracking-wide">Solar</div>
       </div>
-    </div>
+    {:else}
+      <div class="absolute flex flex-col items-center" style="left:{pctX(NODES.solar)}%; top:{pctY(NODES.solar)}%; transform:translate(-50%, -50%);">
+        <div class="{circleSize} rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center shadow-sm">
+          <Icon icon="mdi:solar-power-variant" class="{iconSize} text-gray-800 dark:text-gray-50" />
+        </div>
+        <div class="text-center mt-0.5 leading-tight">
+          <div class="font-semibold {valueSize}">{solarVal.value}<span class="{unitSize} opacity-70 ml-0.5">{solarVal.unit}</span></div>
+          <div class="{labelSize} opacity-60 uppercase tracking-wide">Solar</div>
+        </div>
+      </div>
+    {/if}
 
-    <!-- Grid -->
+    <!-- Grid (virtual battery balance sits above the icon) -->
     <div class="absolute flex flex-col items-center" style="left:{pctX(NODES.grid)}%; top:{pctY(NODES.grid)}%; transform:translate(-50%, -50%);">
+      {#if $virtualBattery.balance !== null}
+        <div class="flex items-center gap-1 mb-0.5 leading-tight whitespace-nowrap">
+          <Icon icon="mdi:battery-plus-variant" class="{vbIconSize} text-gray-800 dark:text-gray-50 opacity-70" />
+          <div class="font-semibold {vbValueSize}">{Math.round($virtualBattery.balance)}<span class="{vbUnitSize} opacity-70 ml-0.5">kWh</span></div>
+        </div>
+      {/if}
       <div class="{circleSize} rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center shadow-sm">
         <Icon icon="mdi:transmission-tower" class="{iconSize} text-gray-800 dark:text-gray-50" />
       </div>
       <div class="text-center mt-0.5 leading-tight">
-        <div class="font-semibold {valueSize} flex items-center justify-center gap-1">
-          <Icon icon={gridArrow} class="{labelSize} text-gray-800 dark:text-gray-50" />
-          <span>{gridVal.value}<span class="{unitSize} opacity-70 ml-0.5">{gridVal.unit}</span></span>
-        </div>
-        <div class="{labelSize} opacity-60 uppercase tracking-wide">{gridLabel}</div>
+        <div class="font-semibold {valueSize}">{gridVal.value}<span class="{unitSize} opacity-70 ml-0.5">{gridVal.unit}</span></div>
       </div>
     </div>
 
@@ -209,29 +236,29 @@
       </div>
       <div class="text-center mt-0.5 leading-tight">
         <div class="font-semibold {valueSize}">{formatPercentage($batterySoc)}<span class="{unitSize} opacity-70 ml-0.5">%</span></div>
-        {#if batteryArrow}
-          <div class="{labelSize} opacity-80 flex items-center justify-center gap-0.5">
-            <Icon icon={batteryArrow} class="text-gray-800 dark:text-gray-50" />
-            <span>{batteryVal.value}{batteryVal.unit}</span>
-          </div>
-        {:else}
-          <div class="{labelSize} opacity-60 uppercase tracking-wide">Idle</div>
-        {/if}
-        {#if batteryStoredKwh != null}
-          <div class="{labelSize} opacity-60">{batteryStoredKwh.toFixed(1)}/{batteryCapacityKwh!.toFixed(1)} kWh</div>
-        {/if}
       </div>
     </div>
 
-    <!-- Home (bottom node — text ABOVE icon so it stays inside the tile) -->
-    <div class="absolute flex flex-col-reverse items-center" style="left:{pctX(NODES.home)}%; top:{pctY(NODES.home)}%; transform:translate(-50%, -50%);">
-      <div class="{circleSize} rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center shadow-sm">
+    <!-- Home (bottom node) -->
+    {#if wide}
+      <div class="absolute {circleSize} rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center shadow-sm"
+           style="left:{pctX(NODES.home)}%; top:{pctY(NODES.home)}%; transform:translate(-50%, -50%);">
         <Icon icon="mdi:home" class="{iconSize} text-gray-800 dark:text-gray-50" />
       </div>
-      <div class="text-center mb-0.5 leading-tight">
+      <div class="absolute text-left leading-tight whitespace-nowrap"
+           style="left:{pctX(NODES.home)}%; top:{pctY(NODES.home)}%; transform:translate(4rem, -50%);">
         <div class="font-semibold {valueSize}">{homeVal.value}<span class="{unitSize} opacity-70 ml-0.5">{homeVal.unit}</span></div>
-        <div class="{labelSize} opacity-60 uppercase tracking-wide">Home</div>
       </div>
-    </div>
+    {:else}
+      <div class="absolute flex flex-col-reverse items-center" style="left:{pctX(NODES.home)}%; top:{pctY(NODES.home)}%; transform:translate(-50%, -50%);">
+        <div class="{circleSize} rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center shadow-sm">
+          <Icon icon="mdi:home" class="{iconSize} text-gray-800 dark:text-gray-50" />
+        </div>
+        <div class="text-center mb-0.5 leading-tight">
+          <div class="font-semibold {valueSize}">{homeVal.value}<span class="{unitSize} opacity-70 ml-0.5">{homeVal.unit}</span></div>
+          <div class="{labelSize} opacity-60 uppercase tracking-wide">Home</div>
+        </div>
+      </div>
+    {/if}
   </div>
 </div>
