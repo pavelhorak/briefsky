@@ -9,6 +9,7 @@
   import EnergyFlowTile from './EnergyFlowTile.svelte';
   import EnergyFlowDiagram from './EnergyFlowDiagram.svelte';
   import { formatPercentage, formatTemperature } from '../Formatting';
+  import { virtualBattery } from '../VirtualBattery';
   import { onMount, onDestroy } from 'svelte';
 
   export let weather: Weather | undefined;
@@ -246,7 +247,15 @@
       onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && onSolarClick()}>
       <div class="flex items-center justify-between mb-2">
         <div class="text-xs font-semibold opacity-50 tracking-[0.2em]">ENERGY</div>
-        <Icon icon="mdi:lightning-bolt-outline" class="text-3xl opacity-60" />
+        <div class="flex items-center gap-4">
+          {#if $virtualBattery.balance !== null}
+            <div class="flex items-center gap-2 whitespace-nowrap" title="Virtual battery balance">
+              <Icon icon="mdi:battery-plus-variant" class="text-2xl opacity-60" />
+              <span class="text-xl font-medium">{Math.round($virtualBattery.balance)}<span class="text-sm opacity-50 ml-1">kWh</span></span>
+            </div>
+          {/if}
+          <Icon icon="mdi:lightning-bolt-outline" class="text-3xl opacity-60" />
+        </div>
       </div>
       <div class="flex-1 flex items-center justify-center min-h-0">
         <EnergyFlowDiagram wide />

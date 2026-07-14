@@ -1,7 +1,6 @@
 <script lang="ts">
   import Icon from '@iconify/svelte';
   import { formatEnergy, formatPercentage } from '../Formatting';
-  import { virtualBattery } from '../VirtualBattery';
   import { entities } from '../HomeAssistant';
   import { configuration } from '../Configuration';
   import {
@@ -150,10 +149,6 @@
   $: valueSize = compact ? 'text-2xl md:text-3xl lg:text-4xl' : 'text-3xl md:text-4xl';
   $: unitSize  = compact ? 'text-base md:text-lg lg:text-xl' : 'text-lg md:text-xl';
   $: labelSize = compact ? 'text-xs md:text-sm' : 'text-sm md:text-base';
-  /* Virtual battery balance above the grid node — half the size of node values */
-  $: vbValueSize = compact ? 'text-sm md:text-base lg:text-lg' : 'text-lg md:text-xl';
-  $: vbUnitSize  = compact ? 'text-xs' : 'text-sm';
-  $: vbIconSize  = compact ? 'text-base md:text-lg lg:text-xl' : 'text-xl md:text-2xl';
 
   /* Node anchor percentage = SVG coord / dimension * 100, applied via inline style. */
   function pctX(n: { x: number }) { return (n.x / WIDTH) * 100; }
@@ -211,14 +206,8 @@
       </div>
     {/if}
 
-    <!-- Grid (virtual battery balance sits above the icon) -->
+    <!-- Grid -->
     <div class="absolute flex flex-col items-center" style="left:{pctX(NODES.grid)}%; top:{pctY(NODES.grid)}%; transform:translate(-50%, -50%);">
-      {#if $virtualBattery.balance !== null}
-        <div class="flex items-center gap-1 mb-0.5 leading-tight whitespace-nowrap">
-          <Icon icon="mdi:battery-plus-variant" class="{vbIconSize} text-gray-800 dark:text-gray-50 opacity-70" />
-          <div class="font-semibold {vbValueSize}">{Math.round($virtualBattery.balance)}<span class="{vbUnitSize} opacity-70 ml-0.5">kWh</span></div>
-        </div>
-      {/if}
       <div class="{circleSize} rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center shadow-sm">
         <Icon icon="mdi:transmission-tower" class="{iconSize} text-gray-800 dark:text-gray-50" />
       </div>
