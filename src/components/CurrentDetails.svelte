@@ -6,7 +6,8 @@
   import Conditions from './primitives/Conditions.svelte';
   import ConditionsIcon from './primitives/ConditionsIcon.svelte';
   import Temperature from './primitives/Temperature.svelte';
-  import Wind from './primitives/Wind.svelte';
+  import Wind, { kphToMs } from './primitives/Wind.svelte';
+  import { formatWindSpeed } from '../Formatting';
   import RelativeHumidity from './primitives/RelativeHumidity.svelte';
   import UVIndex from './primitives/UVIndex.svelte';
   import Distance from './primitives/Distance.svelte';
@@ -46,15 +47,17 @@
         <div class="flex items-center gap-4 mb-6">
           <ConditionsIcon size="large" value={current.conditions_icon} />
           <div class="text-8xl sm:text-[96px] font-normal leading-none"><Temperature value={current.temperature} /></div>
-        </div>
-
-        <div class="flex-1 grid grid-cols-4 gap-6 content-center">
-          <div>
+          <div class="ml-8">
             <div class="text-xs opacity-50 uppercase tracking-widest mb-1">Wind</div>
-            <div class="text-5xl font-normal leading-none flex items-center text-nowrap">
-              <Wind speed={current.wind_speed} direction={current.wind_direction} iconClass="text-[40px]" />
+            <div class="text-5xl font-normal leading-none flex items-center whitespace-nowrap">
+              <span>{formatWindSpeed(kphToMs(current.wind_speed))}</span>
+              <span class="text-2xl opacity-50 ml-2">m/s</span>
+              <Icon icon="wi:wind-deg" class="text-3xl opacity-60 ml-3" style="transform: rotate({(current.wind_direction - 180).toFixed(0)}deg)" />
             </div>
           </div>
+        </div>
+
+        <div class="flex-1 grid grid-cols-3 gap-6 content-center">
           {#if weather?.indoor_temperatures}
             {@const t = weather.indoor_temperatures}
             <div>
