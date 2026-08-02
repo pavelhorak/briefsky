@@ -1,23 +1,59 @@
 <script lang="ts">
-  import { entities, callService } from '../HomeAssistant';
+  import { entities, lastKnown, retained, isUsableState, callService } from '../HomeAssistant';
   import { configuration } from '../Configuration';
   import Icon from '@iconify/svelte';
   import { Button, Toggle } from 'flowbite-svelte';
   import { formatTemperature } from '../Formatting';
-  import { getContext } from 'svelte';
+  import { getContext, onDestroy } from 'svelte';
 
   const closeOverlay = getContext<() => void>('overlay-close');
 
   $: ids = $configuration.entityIds;
   $: climate = $entities[ids.teslaClimate];
 
+  /* Retained readers — fall back to the last usable value while the car is asleep.
+     Use these for state that stays true while parked (charge level, doors, temps). */
   function num(id: string, fallback = 0): number {
-    const v = parseFloat($entities[id]?.state ?? '');
+    const v = parseFloat(retained($entities, $lastKnown, id).state);
     return Number.isFinite(v) ? v : fallback;
   }
   function str(id: string): string {
-    return $entities[id]?.state ?? '';
+    return retained($entities, $lastKnown, id).state;
   }
+
+  /* Live-only readers — never fall back. Charging telemetry that is stale is simply
+     wrong, so it should read '--' rather than replay the last session's numbers. */
+  function liveNum(id: string, fallback = 0): number {
+    const s = $entities[id]?.state;
+    const v = parseFloat(isUsableState(s) ? (s as string) : '');
+    return Number.isFinite(v) ? v : fallback;
+  }
+  function liveStr(id: string): string {
+    const s = $entities[id]?.state;
+    return isUsableState(s) ? (s as string) : '';
+  }
+
+  /* Asleep = the vehicle's own state entity has gone unknown but we have history for it. */
+  $: asleep = !isUsableState($entities[ids.teslaBattery]?.state) && !!$lastKnown[ids.teslaBattery];
+  $: asleepSince = $lastKnown[ids.teslaBattery]?.at ?? null;
+
+  /* `now` is an explicit parameter, not a closure read: Svelte only tracks the variables
+     named in the template expression, so reading nowTick inside the body would freeze
+     the label at its first value. */
+  function agoLabel(at: number | null, now: number): string {
+    if (!at) return '';
+    const mins = Math.max(0, Math.round((now - at) / 60000));
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins} min ago`;
+    const h = Math.floor(mins / 60);
+    return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
+  }
+
+  let nowTick = Date.now();
+  const tick = setInterval(() => (nowTick = Date.now()), 30000);
+  onDestroy(() => clearInterval(tick));
+
+  $: asleepLabel = agoLabel(asleepSince, nowTick);
 
   $: cablePlugged = str(ids.teslaChargingCable) === 'on';
   $: chargeState = str(ids.teslaCharging).toLowerCase();
@@ -27,11 +63,11 @@
   $: range = num(ids.teslaRange);
   $: chargeLimit = num(ids.teslaChargeLimit, 80);
 
-  $: chargeCurrent = num(ids.teslaChargeCurrent);
-  $: chargeVoltage = num(ids.teslaChargeVoltage);
-  $: chargePower = num(ids.teslaChargePower);
-  $: addedEnergy = num(ids.teslaAddedEnergy);
-  $: timeToFullStr = str(ids.teslaTimeToFull);
+  $: chargeCurrent = liveNum(ids.teslaChargeCurrent);
+  $: chargeVoltage = liveNum(ids.teslaChargeVoltage);
+  $: chargePower = liveNum(ids.teslaChargePower);
+  $: addedEnergy = liveNum(ids.teslaAddedEnergy);
+  $: timeToFullStr = liveStr(ids.teslaTimeToFull);
 
   $: insideTemp = num(ids.teslaInteriorTemp);
   $: outsideTemp = num(ids.teslaOutsideTemp);
@@ -58,8 +94,8 @@
     'binary_sensor.juniper_zadne_okno_spolujazdca',
   ];
 
-  $: anyDoorOpen = doorIds.some(id => $entities[id]?.state === 'on');
-  $: anyWindowOpen = windowIds.some(id => $entities[id]?.state === 'on') || windows === 'open';
+  $: anyDoorOpen = doorIds.some(id => str(id) === 'on');
+  $: anyWindowOpen = windowIds.some(id => str(id) === 'on') || windows === 'open';
 
   function chargeStateLabel(state: string): string {
     if (!cablePlugged) return 'Unplugged';
@@ -113,7 +149,14 @@
           <Icon icon="simple-icons:tesla" class="text-3xl text-gray-800 dark:text-gray-50" />
         </button>
         <span>Battery</span>
-        <span class="text-sm font-medium opacity-60 ml-auto">Juniper</span>
+        <span class="text-sm font-medium opacity-60 ml-auto flex items-center gap-1.5">
+          {#if asleep}
+            <Icon icon="mdi:sleep" class="text-base" />
+            <span>Asleep · {asleepLabel}</span>
+          {:else}
+            Juniper
+          {/if}
+        </span>
       </h2>
       <div class="flex items-baseline gap-3 mb-2">
         <div class="text-6xl font-light">{battery.toFixed(0)}<span class="text-2xl opacity-60">%</span></div>

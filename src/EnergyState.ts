@@ -15,17 +15,29 @@ export const isBackupMode = derived([entities, configuration], ([$entities, $con
   return isUnusable($entities[$configuration.entityIds.loadPower]?.state);
 });
 
+/**
+ * True when the inverter's own sensors are reporting nothing at all — i.e. the Solarman
+ * logger is unreachable, not merely idle. Distinguished from a genuine zero: `num()`
+ * coerces `unavailable` to 0, which renders as a plausible "0 W" and hides an outage.
+ * Note `isUnusable` treats '0' as unusable, so we check the raw HA state here instead.
+ */
+export const isInverterOffline = derived([entities, configuration], ([$entities, $configuration]) => {
+  const probes = [$configuration.entityIds.pvPower, $configuration.entityIds.solarPower, $configuration.entityIds.gridPower];
+  return probes.every((id) => {
+    const s = $entities[id]?.state;
+    return !s || s === 'unknown' || s === 'unavailable';
+  });
+});
+
 export const consumptionEntityId = derived([isBackupMode, configuration], ([$backup, $configuration]) =>
-  $backup ? $configuration.entityIds.backupMeter : $configuration.entityIds.loadPower
+  $backup ? $configuration.entityIds.backupMeter : $configuration.entityIds.loadPower,
 );
 
 export const gridEntityId = derived([isBackupMode, configuration], ([$backup, $configuration]) =>
-  $backup ? $configuration.entityIds.backupMeter : $configuration.entityIds.gridPower
+  $backup ? $configuration.entityIds.backupMeter : $configuration.entityIds.gridPower,
 );
 
-export const solarWatts = derived([entities, configuration], ([$entities, $configuration]) =>
-  num($entities[$configuration.entityIds.solarPower]?.state)
-);
+export const solarWatts = derived([entities, configuration], ([$entities, $configuration]) => num($entities[$configuration.entityIds.solarPower]?.state));
 
 export const consumptionWatts = derived([entities, consumptionEntityId], ([$entities, $id]) => num($entities[$id]?.state));
 
@@ -37,19 +49,15 @@ export const gridIcon = derived([isBackupMode, gridWatts], ([$backup, $grid]) =>
 });
 
 /* PV (DC, direct from panels) — preferred for "solar production" in the flow diagram */
-export const pvWatts = derived([entities, configuration], ([$entities, $configuration]) =>
-  num($entities[$configuration.entityIds.pvPower]?.state)
-);
+export const pvWatts = derived([entities, configuration], ([$entities, $configuration]) => num($entities[$configuration.entityIds.pvPower]?.state));
 
 /* Battery */
-export const batterySoc = derived([entities, configuration], ([$entities, $configuration]) =>
-  num($entities[$configuration.entityIds.batterySoc]?.state)
-);
+export const batterySoc = derived([entities, configuration], ([$entities, $configuration]) => num($entities[$configuration.entityIds.batterySoc]?.state));
 
 /* Battery power magnitude (W). Charging or discharging — sign convention varies, so we
    rely on batteryState for direction and use absolute value for magnitude. */
 export const batteryWatts = derived([entities, configuration], ([$entities, $configuration]) =>
-  Math.abs(num($entities[$configuration.entityIds.batteryPower]?.state))
+  Math.abs(num($entities[$configuration.entityIds.batteryPower]?.state)),
 );
 
 export const batteryState = derived([entities, configuration], ([$entities, $configuration]) => {

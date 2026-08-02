@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { configuration } from './Configuration';
-  import { connect } from './HomeAssistant';
+  import { connect, seedRetainedFromHistory } from './HomeAssistant';
+  import { startAutoUpdate } from './AutoUpdate';
 
   import type { Provider, Weather } from './providers/Provider';
   import { Location } from './providers/Location';
@@ -84,6 +85,9 @@
   }
 
   onMount(() => {
+    // Pick up new deploys silently (HA's 31-day cache headers defeat the normal SW update)
+    startAutoUpdate();
+
     // Listen for system theme changes
     const darkMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const onThemeChange = () => applyTheme($configuration.theme);
@@ -99,7 +103,14 @@
       // Home Assistant Connection
       console.log('App: Initializing Home Assistant connection...');
       if ($configuration.haUrl && $configuration.haToken) {
-        connect($configuration.haUrl, $configuration.haToken);
+        await connect($configuration.haUrl, $configuration.haToken);
+        /* Backfill last-known values so a sleeping car / offline inverter still shows its
+           last reading on a cold load, instead of a blank tile. */
+        const ids = $configuration.entityIds;
+        void seedRetainedFromHistory([
+          ids.teslaBattery, ids.teslaRange, ids.teslaInteriorTemp, ids.teslaOutsideTemp,
+          ids.teslaCharging, ids.teslaChargingCable, ids.teslaLock, ids.teslaChargeLimit,
+        ]);
       } else {
         console.warn('App: HA URL or Token missing from config', { url: $configuration.haUrl, token: $configuration.haToken ? 'PRESENT' : 'MISSING' });
       }

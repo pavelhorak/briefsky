@@ -25,6 +25,15 @@ mv "dist/sw.js" "dist/${NEW_SW}"
 sed -i.bak "s|'./sw\.js'|'./${NEW_SW}'|g" dist/registerSW.js
 rm dist/registerSW.js.bak
 
+# Renaming the worker alone is not enough behind a CDN: Cloudflare also caches
+# registerSW.js, which is the file that NAMES the worker. A stale copy pins clients to a
+# swN.js we have already pruned, so the new worker is never registered and the rename
+# achieves nothing. Give the reference a unique query string so the CDN sees a new URL.
+echo "==> Cache-busting the registerSW.js reference (CDN)..."
+sed -i.bak "s|\./registerSW\.js|./registerSW.js?v=${NEW_SW%.js}|" dist/index.html
+rm dist/index.html.bak
+echo "    index.html -> $(grep -o 'registerSW\.js?v=[a-z0-9]*' dist/index.html | head -1 || echo 'PATCH FAILED')"
+
 echo "==> Uploading to ${HOST}:${REMOTE}/..."
 scp -q -r dist/* "${HOST}:${REMOTE}/"
 

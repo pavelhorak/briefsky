@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Weather } from '../providers/Provider';
   import WeatherSummaryTile from './WeatherSummaryTile.svelte';
-  import { entities, callService } from '../HomeAssistant';
+  import { entities, lastKnown, retained, isUsableState, callService } from '../HomeAssistant';
   import { configuration, loadConfiguration, storeConfiguration } from '../Configuration';
   import Icon from '@iconify/svelte';
   import SensorTile from './primitives/SensorTile.svelte';
@@ -10,6 +10,7 @@
   import EnergyFlowDiagram from './EnergyFlowDiagram.svelte';
   import { formatPercentage, formatTemperature } from '../Formatting';
   import { virtualBattery } from '../VirtualBattery';
+  import { isInverterOffline } from '../EnergyState';
   import { onMount, onDestroy } from 'svelte';
 
   export let weather: Weather | undefined;
@@ -39,8 +40,32 @@
     await callService(domain, 'toggle', { entity_id });
   };
 
-  $: cablePlugged = $entities[ids.teslaChargingCable]?.state === 'on';
-  $: isCharging = $entities[ids.teslaCharging]?.state?.toLowerCase() === 'charging';
+  /* Climate entities report a HVAC mode ('off' | 'heat_cool' | ...), not on/off, so
+     `climate.toggle` is unreliable here — pick the explicit service instead. Deliberately
+     reads the LIVE state, not the retained one: a stale "on" on a control would invite a
+     press that turns climate off when it was already off. Unknown (asleep) counts as off,
+     so the press sends turn_on, which also wakes the car. */
+  const climateIsOn = (state: string | undefined) => !!state && state !== 'off' && isUsableState(state);
+
+  const toggleTeslaClimate = async () => {
+    const on = climateIsOn($entities[ids.teslaClimate]?.state);
+    await callService('climate', on ? 'turn_off' : 'turn_on', { entity_id: ids.teslaClimate });
+  };
+
+  /* DHW boost is a momentary action (comfort setpoint for 30 min), not a toggle — the
+     boiler owns the timer. So the button always presses, and the lit state instead
+     reflects whether the tank is actually heating right now (see the strip's isOn). */
+  const boostHotWater = async () => {
+    await callService('button', 'press', { entity_id: ids.dhwBoost });
+  };
+
+  /* Tesla state is read through `retained` so a sleeping car keeps showing its last
+     known charge/cabin readings instead of blanking to '--'. See HomeAssistant.ts. */
+  $: teslaState = (id: string) => retained($entities, $lastKnown, id).state;
+  $: teslaAsleep = !isUsableState($entities[ids.teslaBattery]?.state) && !!$lastKnown[ids.teslaBattery];
+
+  $: cablePlugged = teslaState(ids.teslaChargingCable) === 'on';
+  $: isCharging = teslaState(ids.teslaCharging).toLowerCase() === 'charging';
   $: chargeIcon = !cablePlugged
     ? 'mdi:power-plug-off'
     : isCharging
@@ -76,14 +101,14 @@
       <SensorTile
         mainIcon="simple-icons:tesla"
         mainIconClass="text-3xl text-gray-800 dark:text-gray-50"
-        mainTooltip="Tesla Status: {$entities[ids.teslaCharging]?.state || 'unknown'}"
+        mainTooltip="Tesla Status: {teslaState(ids.teslaCharging) || 'unknown'}"
         sensors={[
           {
             id: 'p-icon-tesla-battery',
             icon: 'fa-solid:car-battery',
             iconClass: 'text-gray-800 dark:text-gray-50',
             tooltip: 'Battery Level',
-            value: formatPercentage(parseFloat($entities[ids.teslaBattery]?.state || '0')),
+            value: formatPercentage(parseFloat(teslaState(ids.teslaBattery) || 'x')),
             unit: '%'
           },
           {
@@ -99,7 +124,7 @@
             icon: 'mdi:thermometer',
             iconClass: 'text-gray-800 dark:text-gray-50',
             tooltip: 'Interior Temperature',
-            value: formatTemperature(parseFloat($entities[ids.teslaInteriorTemp]?.state || '0')),
+            value: formatTemperature(parseFloat(teslaState(ids.teslaInteriorTemp) || 'x')),
             unit: '°C'
           }
         ]}
@@ -246,7 +271,14 @@
       onclick={onSolarClick}
       onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && onSolarClick()}>
       <div class="flex items-center justify-between mb-2">
-        <div class="text-xs font-semibold opacity-50 tracking-[0.2em]">ENERGY</div>
+        <div class="text-xs font-semibold opacity-50 tracking-[0.2em] flex items-center gap-2">
+          ENERGY
+          {#if $isInverterOffline}
+            <span class="flex items-center gap-1 normal-case tracking-normal font-medium" title="Solarman logger unreachable">
+              <Icon icon="mdi:lan-disconnect" class="text-sm" />offline
+            </span>
+          {/if}
+        </div>
         <div class="flex items-center gap-4">
           {#if $virtualBattery.balance !== null}
             <div class="flex items-center gap-2 whitespace-nowrap" title="Virtual battery balance">
@@ -297,17 +329,20 @@
       onclick={onTeslaClick}
       onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && onTeslaClick()}>
       <div class="flex items-center justify-between mb-2">
-        <div class="text-xs font-semibold opacity-50 tracking-[0.2em]">TESLA</div>
+        <div class="text-xs font-semibold opacity-50 tracking-[0.2em] flex items-center gap-2">
+          TESLA
+          {#if teslaAsleep}<Icon icon="mdi:sleep" class="text-sm opacity-70" />{/if}
+        </div>
         <Icon icon="simple-icons:tesla" class="text-3xl opacity-60" />
       </div>
       <div class="flex-1 grid grid-cols-3 gap-6 content-center">
         <div>
           <div class="text-xs opacity-50 uppercase tracking-widest mb-1">Charge</div>
-          <div class="text-5xl font-normal leading-none">{formatPercentage(parseFloat($entities[ids.teslaBattery]?.state || '0'))}<span class="text-2xl opacity-50 ml-1">%</span></div>
+          <div class="text-5xl font-normal leading-none">{formatPercentage(parseFloat(teslaState(ids.teslaBattery) || 'x'))}<span class="text-2xl opacity-50 ml-1">%</span></div>
         </div>
         <div>
           <div class="text-xs opacity-50 uppercase tracking-widest mb-1">Cabin</div>
-          <div class="text-5xl font-normal leading-none">{formatTemperature(parseFloat($entities[ids.teslaInteriorTemp]?.state || '0'))}<span class="text-2xl opacity-50 ml-1">°C</span></div>
+          <div class="text-5xl font-normal leading-none">{formatTemperature(parseFloat(teslaState(ids.teslaInteriorTemp) || 'x'))}<span class="text-2xl opacity-50 ml-1">°C</span></div>
         </div>
         <div>
           <div class="text-xs opacity-50 uppercase tracking-widest mb-1">Status</div>
@@ -325,17 +360,22 @@
         { entity: ids.fireplaceSwitch, label: 'Fireplace', onIcon: 'mdi:fireplace', offIcon: 'mdi:fireplace', action: () => toggleEntity(ids.fireplaceSwitch) },
         { entity: ids.garageLight, label: 'Garage', onIcon: 'mdi:lightbulb', offIcon: 'mdi:lightbulb-off', action: () => toggleEntity(ids.garageLight) },
         { entity: ids.outdoorLight, label: 'Outdoor', onIcon: 'mdi:outdoor-lamp', offIcon: 'mdi:outdoor-lamp', action: () => toggleEntity(ids.outdoorLight) },
+        { entity: ids.dhwStatus, label: 'Hot Water', onIcon: 'mdi:water-boiler', offIcon: 'mdi:water-boiler-off',
+          isOn: (s: string | undefined) => s === 'ProducingHeat', action: () => boostHotWater() },
+        { entity: ids.teslaClimate, label: 'Car Climate', onIcon: 'mdi:air-conditioner', offIcon: 'mdi:air-conditioner',
+          isOn: climateIsOn, action: () => toggleTeslaClimate() },
         { entity: ids.garageDoor, label: 'Door', onIcon: 'mdi:garage-open-variant', offIcon: 'mdi:garage-variant', action: () => toggleEntity(ids.garageDoor) },
         { entity: ids.gateOpen, label: 'Gate', onIcon: 'mdi:gate-open', offIcon: 'mdi:gate', action: () => {
             const isOpen = $entities[ids.gateOpen]?.state === 'on';
             toggleEntity(isOpen ? ids.gateClose : ids.gateOpen);
           } }
       ] as sw (sw.label)}
-        {@const on = $entities[sw.entity]?.state === 'on'}
+        {@const on = sw.isOn ? sw.isOn($entities[sw.entity]?.state) : $entities[sw.entity]?.state === 'on'}
         <button onclick={(e) => { sw.action(); e.currentTarget.blur(); }}
           class="flex items-center gap-3 px-5 py-2 rounded-2xl bg-transparent hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 transition whitespace-nowrap appearance-none focus:outline-none focus-visible:outline-none focus:ring-0 focus:shadow-none">
-          <Icon icon={on ? sw.onIcon : sw.offIcon} class="text-4xl {on ? 'opacity-100' : 'opacity-40'}" />
-          <span class="text-lg font-medium {on ? 'opacity-100' : 'opacity-50'}">{sw.label}</span>
+          <!-- 20% down from text-4xl (36px) / text-lg (18px) -->
+          <Icon icon={on ? sw.onIcon : sw.offIcon} class="text-[28.8px] {on ? 'opacity-100' : 'opacity-40'}" />
+          <span class="text-[14.4px] font-medium {on ? 'opacity-100' : 'opacity-50'}">{sw.label}</span>
         </button>
       {/each}
     </div>

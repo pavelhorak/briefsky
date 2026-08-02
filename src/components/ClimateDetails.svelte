@@ -28,6 +28,19 @@
   $: dhwActive = str(ids.dhwActive) === 'on';
   $: dhwStatusText = str(ids.dhwStatus);
   $: dhwTemp = num(ids.dhwTemp);
+
+  /* One-shot action: the boiler runs its own 30-minute timer, and the API only accepts
+     boost while the zone is in Schedule mode. Latch the button briefly so a double-tap
+     can't fire two requests before the coordinator refreshes. */
+  let boostSent = false;
+  async function boostHotWater() {
+    boostSent = true;
+    try {
+      await callService('button', 'press', { entity_id: ids.dhwBoost });
+    } finally {
+      setTimeout(() => (boostSent = false), 10000);
+    }
+  }
   $: pressure = num(ids.waterPressure);
   $: pressureUnit = $entities[ids.waterPressure]?.attributes?.unit_of_measurement || 'bar';
 
@@ -143,6 +156,13 @@
           <div class="text-sm uppercase opacity-60 font-bold">{dhwStatusText}</div>
         {/if}
       </div>
+
+      <!-- Boost raises the tank to its comfort setpoint for 30 minutes. The boiler owns
+           that timer, so this is a one-shot action, not a toggle. -->
+      <Button color="alternative" class="mt-4 w-full border-gray-800 dark:border-gray-50" on:click={boostHotWater} disabled={boostSent}>
+        <Icon icon="mdi:water-plus" class="mr-2 text-xl" />
+        {boostSent ? 'Boost started — 30 min' : 'Boost 30 min'}
+      </Button>
     </div>
 
     <!-- 3. Utilities & Extras -->

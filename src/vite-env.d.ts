@@ -5,6 +5,7 @@ declare global {
   interface Window {
     __APP_VERSION__: string;
     __APP_COMMIT_ID__: string;
+    __APP_BUILD_ID__: string;
   }
 }
 

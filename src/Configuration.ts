@@ -87,6 +87,7 @@ export interface EntityIds {
   dhwTemp: string;
   dhwActive: string;
   dhwStatus: string;
+  dhwBoost: string;
   waterPressure: string;
   // Camera
   camera: string;
@@ -153,6 +154,7 @@ export const DEFAULT_ENTITY_IDS: EntityIds = {
   dhwTemp: 'sensor.dhw_water_temperature',
   dhwActive: 'binary_sensor.dhw_status',
   dhwStatus: 'sensor.dhw_status',
+  dhwBoost: 'button.living_room_dhw_boost',
   waterPressure: 'sensor.home_water_pressure',
   camera: 'camera.camera_media_profile1',
   garageLight: 'switch.sonoff_1001e97b61',

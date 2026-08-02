@@ -2,6 +2,7 @@
   import { Tabs, TabItem, Label, Select, Input, Hr, Button, Radio, Checkbox } from 'flowbite-svelte';
   import { AutoExpand, Layout, loadConfiguration, storeConfiguration, Theme } from '../Configuration';
   import type { Configuration } from '../Configuration';
+  import { hardReload } from '../AutoUpdate';
 
   export let onSave: () => void;
 
@@ -150,11 +151,7 @@
 
   <div class="mt-8 flex justify-between items-center gap-2">
     <div class="flex gap-2">
-      <Button on:click={async () => {
-        await navigator.serviceWorker.getRegistrations().then(r => r.forEach(sw => sw.unregister()));
-        await caches.keys().then(k => Promise.all(k.map(c => caches.delete(c))));
-        window.location.reload();
-      }} color="alternative" class="text-gray-500 dark:text-gray-400">Clear Cache</Button>
+      <Button on:click={hardReload} color="alternative" class="text-gray-500 dark:text-gray-400">Clear Cache</Button>
       {#if installable}
         <Button on:click={handleInstall} color="alternative" class="text-gray-500 dark:text-gray-400">Install App</Button>
       {/if}
